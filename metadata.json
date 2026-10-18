@@ -1,0 +1,6 @@
+{
+  "name": "WinTablet WebOS",
+  "description": "Un ambiente desktop stile Windows leggero e ottimizzato per tablet con editor di testo, editor di codice, sticky notes, launcher per web app esterne e gestione memoria.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
