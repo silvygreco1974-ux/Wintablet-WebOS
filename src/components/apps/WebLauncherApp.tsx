@@ -25,6 +25,15 @@ interface WebLauncherAppProps {
 
 const PRESET_POPULAR_APPS = [
   {
+    name: 'Netflix',
+    url: 'https://www.netflix.com',
+    iconName: 'Laptop',
+    iconColor: '#e50914',
+    category: 'Social' as const,
+    displayMode: 'new_tab' as const,
+    description: 'Streaming film, serie TV e documentari',
+  },
+  {
     name: 'Notion',
     url: 'https://www.notion.so',
     iconName: 'Bookmark',

@@ -65,7 +65,7 @@ export interface CustomWebApp {
   url: string;
   iconName: string;
   iconColor: string;
-  category: 'Produttività' | 'Strumenti' | 'Sviluppo' | 'Studio' | 'Grafica & Design' | 'Social' | 'Altro';
+  category: 'Produttività' | 'Strumenti' | 'Sviluppo' | 'Studio' | 'Grafica & Design' | 'Social' | 'Intrattenimento' | 'Altro';
   displayMode: 'window' | 'new_tab';
   description?: string;
   isPinnedDesktop?: boolean;

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { AppId, SystemSettings, WindowItem } from '../../types/os';
 import { sound } from '../../utils/audio';
+import { PWAInstallButton } from '../pwa/PWAInstallButton';
 
 interface TaskbarProps {
   windows: WindowItem[];
@@ -188,9 +189,12 @@ export const Taskbar: React.FC<TaskbarProps> = ({
               {/* Running Indicator Bar */}
               {isRunning && (
                 <div
-                  className={`absolute bottom-0.5 rounded-full transition-all ${
-                    isActive ? 'w-4 h-1 bg-blue-600 dark:bg-blue-400' : 'w-1.5 h-1 bg-slate-400'
-                  }`}
+                  className="absolute bottom-0.5 rounded-full transition-all"
+                  style={{
+                    width: isActive ? '16px' : '6px',
+                    height: '3px',
+                    backgroundColor: isActive ? 'var(--accent-hex, #2563eb)' : '#94a3b8',
+                  }}
                 />
               )}
             </button>
@@ -236,6 +240,9 @@ export const Taskbar: React.FC<TaskbarProps> = ({
 
       {/* Right: System Tray */}
       <div className="flex items-center gap-1 shrink-0">
+        {/* PWA Install Button in Taskbar */}
+        <PWAInstallButton variant="taskbar" />
+
         {/* Tablet Mode toggle quick icon */}
         <button
           onClick={() => {
@@ -258,37 +265,41 @@ export const Taskbar: React.FC<TaskbarProps> = ({
             sound.playClick();
             onToggleActionCenter();
           }}
-          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-colors ${
+          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl transition-colors ${
             isActionCenterOpen
-              ? 'bg-white/20 text-white'
-              : 'hover:bg-white/10 text-slate-300'
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'hover:bg-slate-200 dark:hover:bg-white/10 text-slate-800 dark:text-slate-200'
           }`}
           title="Centro Notifiche e Azioni Rapide"
         >
-          <Wifi className="w-3.5 h-3.5 text-slate-300" />
+          <Wifi className="w-3.5 h-3.5 text-current" />
           {settings.soundEnabled ? (
-            <Volume2 className="w-3.5 h-3.5 text-slate-300" />
+            <Volume2 className="w-3.5 h-3.5 text-current" />
           ) : (
-            <VolumeX className="w-3.5 h-3.5 text-rose-400" />
+            <VolumeX className="w-3.5 h-3.5 text-rose-500" />
           )}
-          <Battery className="w-3.5 h-3.5 text-emerald-400" />
+          <Battery className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
         </button>
 
-        {/* Date & Time with Calendar flyout toggle */}
+        {/* Date & Time with Calendar flyout toggle - Ultra visible in light theme */}
         <button
           onClick={() => {
             sound.playClick();
             onToggleCalendar();
           }}
-          className={`flex flex-col items-end px-2 py-1 rounded-lg text-right text-xs transition-colors ${
+          className={`flex flex-col items-end px-2.5 py-1 rounded-xl text-right text-xs transition-colors ${
             isCalendarOpen
-              ? 'bg-white/20 text-white'
-              : 'hover:bg-white/10 text-slate-200'
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'hover:bg-slate-200 dark:hover:bg-white/10 text-slate-900 dark:text-slate-100'
           }`}
-          title="Data e Ora"
+          title="Data e Ora (Tocca per aprire il calendario)"
         >
-          <span className="font-semibold text-[11px] leading-tight font-mono">{time}</span>
-          <span className="text-[10px] text-slate-400 leading-tight font-mono">{date}</span>
+          <span className="font-mono font-extrabold text-[12px] leading-tight text-slate-900 dark:text-white">
+            {time}
+          </span>
+          <span className="font-mono font-bold text-[10px] text-slate-600 dark:text-slate-400 leading-tight">
+            {date}
+          </span>
         </button>
 
         {/* Desktop Peak line (click to minimize all windows) */}

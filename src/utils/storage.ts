@@ -3,34 +3,34 @@ import { CustomWebApp, StickyNote, SystemSettings, VirtualFile } from '../types/
 export const WALLPAPERS = [
   {
     id: 'bloom-light',
-    name: 'Windows 11 Bloom Luce & Colori',
-    url: '/src/assets/images/win_bloom_light_1792313311807.jpg',
-    category: 'Vibrante',
+    name: 'Windows 11 Bloom Luce Naturale',
+    url: '/wallpapers/win_bloom_light.jpg',
+    category: 'Vibrante Soft',
   },
   {
     id: 'bloom',
     name: 'Windows 11 Bloom Dark',
-    url: '/src/assets/images/win_bloom_wallpaper_1792312140457.jpg',
+    url: '/wallpapers/win_bloom_dark.jpg',
     category: 'Notturno',
   },
   {
     id: 'mountain',
     name: 'Alba Alpina Riflesso',
-    url: '/src/assets/images/scenic_mountain_wallpaper_1792312140789.jpg',
+    url: '/wallpapers/scenic_mountain.jpg',
     category: 'Natura',
   },
   {
     id: 'glass',
     name: 'Scultura Minimal Vetro',
-    url: '/src/assets/images/minimal_glass_wallpaper_1792312141047.jpg',
+    url: '/wallpapers/minimal_glass.jpg',
     category: 'Design',
   },
 ];
 
 const DEFAULT_SETTINGS: SystemSettings = {
-  theme: 'light',
+  theme: 'dark',
   accentColor: 'blue',
-  wallpaper: '/src/assets/images/win_bloom_light_1792313311807.jpg',
+  wallpaper: '/wallpapers/win_bloom_dark.jpg',
   taskbarAlign: 'center',
   tabletMode: false,
   soundEnabled: true,
@@ -176,6 +176,18 @@ console.log("Risparmio effettivo:", "99.8% di memoria risparmiata!");
 
 const DEFAULT_WEB_APPS: CustomWebApp[] = [
   {
+    id: 'web-netflix',
+    name: 'Netflix',
+    url: 'https://www.netflix.com',
+    iconName: 'Tv',
+    iconColor: '#e50914',
+    category: 'Intrattenimento',
+    displayMode: 'window',
+    description: 'Film, serie TV e documentari in streaming',
+    isPinnedDesktop: true,
+    isPinnedTaskbar: true,
+  },
+  {
     id: 'web-wikipedia',
     name: 'Wikipedia Italia',
     url: 'https://it.wikipedia.org',
@@ -241,7 +253,15 @@ export const StorageService = {
   getSettings(): SystemSettings {
     try {
       const data = localStorage.getItem('win_tablet_settings');
-      if (data) return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
+      if (data) {
+        const parsed = JSON.parse(data);
+        // Normalize legacy paths
+        if (parsed.wallpaper?.includes('win_bloom_light')) parsed.wallpaper = '/wallpapers/win_bloom_light.jpg';
+        else if (parsed.wallpaper?.includes('win_bloom_wallpaper') || parsed.wallpaper?.includes('win_bloom_dark')) parsed.wallpaper = '/wallpapers/win_bloom_dark.jpg';
+        else if (parsed.wallpaper?.includes('scenic_mountain')) parsed.wallpaper = '/wallpapers/scenic_mountain.jpg';
+        else if (parsed.wallpaper?.includes('minimal_glass')) parsed.wallpaper = '/wallpapers/minimal_glass.jpg';
+        return { ...DEFAULT_SETTINGS, ...parsed };
+      }
     } catch (e) {
       console.warn('Errore lettura settings', e);
     }
@@ -295,7 +315,14 @@ export const StorageService = {
   getWebApps(): CustomWebApp[] {
     try {
       const data = localStorage.getItem('win_tablet_web_apps');
-      if (data) return JSON.parse(data);
+      if (data) {
+        const list: CustomWebApp[] = JSON.parse(data);
+        if (!list.some((w) => w.id === 'web-netflix' || w.name.toLowerCase() === 'netflix')) {
+          const netflix = DEFAULT_WEB_APPS.find((w) => w.id === 'web-netflix')!;
+          return [netflix, ...list];
+        }
+        return list;
+      }
     } catch (e) {
       console.warn('Errore lettura web apps', e);
     }

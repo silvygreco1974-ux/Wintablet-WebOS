@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { AppId, CustomWebApp, StickyNote, SystemSettings, VirtualFile, WindowItem } from './types/os';
 import { StorageService } from './utils/storage';
 import { sound } from './utils/audio';
+import { applyAccentToDocument } from './utils/theme';
+import { OfflineIndicator } from './components/pwa/OfflineIndicator';
 import { Desktop } from './components/desktop/Desktop';
 import { Taskbar } from './components/taskbar/Taskbar';
 import { StartMenu } from './components/startmenu/StartMenu';
@@ -62,23 +64,21 @@ export default function App() {
     document.documentElement.classList.add(`font-scale-${scale}`);
   }, [settings.fontScale]);
 
+  // Synchronize dynamic accent color with document styling
+  useEffect(() => {
+    applyAccentToDocument(settings.accentColor);
+  }, [settings.accentColor]);
+
   const handleToggleTheme = () => {
     const nextTheme = settings.theme === 'light' ? 'dark' : 'light';
     const nextWallpaper =
       nextTheme === 'light'
-        ? '/src/assets/images/win_bloom_light_1792313311807.jpg'
-        : '/src/assets/images/win_bloom_wallpaper_1792312140457.jpg';
+        ? '/wallpapers/win_bloom_light.jpg'
+        : '/wallpapers/win_bloom_dark.jpg';
     handleUpdateSettings({ ...settings, theme: nextTheme, wallpaper: nextWallpaper });
   };
 
-  // Open default Text Editor on first load as an welcoming example
-  useEffect(() => {
-    const welcomeDoc = files.find((f) => f.id === 'doc-intro') || files[0];
-    if (welcomeDoc) {
-      setActiveDocFile(welcomeDoc);
-      openWindow('text-editor', 'WinNote - ' + welcomeDoc.name, '#2563eb', 820, 560, { file: welcomeDoc });
-    }
-  }, []);
+
 
   // Save changes to storage
   const handleUpdateSettings = (newSettings: SystemSettings) => {
@@ -433,6 +433,7 @@ export default function App() {
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-slate-100 dark:bg-slate-950 font-sans antialiased">
+      <OfflineIndicator />
       {/* Desktop Surface */}
       <Desktop
         settings={settings}

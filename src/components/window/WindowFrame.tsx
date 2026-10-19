@@ -142,11 +142,14 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
 
   return (
     <div
-      style={style}
+      style={{
+        ...style,
+        borderColor: isActive ? 'var(--accent-hex, #2563eb)' : undefined,
+      }}
       onPointerDown={onFocus}
       className={`flex flex-col bg-white dark:bg-slate-900 border transition-[box-shadow,border-color] duration-150 overflow-hidden shadow-2xl ${
         isActive
-          ? 'border-blue-500 ring-2 ring-blue-500/30 shadow-[0_16px_50px_rgba(0,0,0,0.28)]'
+          ? 'ring-2 ring-[var(--accent-hex,#2563eb)]/30 shadow-[0_16px_50px_rgba(0,0,0,0.28)]'
           : 'border-slate-300 dark:border-slate-700 shadow-[0_8px_24px_rgba(0,0,0,0.15)]'
       }`}
     >

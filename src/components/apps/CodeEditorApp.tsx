@@ -25,14 +25,17 @@ interface CodeEditorAppProps {
   files: VirtualFile[];
 }
 
-const TEMPLATES: Record<string, { name: string; lang: string; code: string }> = {
+const TEMPLATES: Record<string, { name: string; lang: string; code: string; desc: string }> = {
   clock: {
-    name: 'Orologio Neon',
+    name: 'Orologio Neon Live',
     lang: 'html',
+    desc: 'Orologio digitale con lancette secondi e data',
     code: `<!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8">
   <style>
+    * { box-sizing: border-box; }
     body {
       background: radial-gradient(circle at center, #1e293b, #0f172a);
       height: 100vh;
@@ -42,34 +45,48 @@ const TEMPLATES: Record<string, { name: string; lang: string; code: string }> = 
       justify-content: center;
       align-items: center;
       color: #38bdf8;
-      font-family: system-ui, sans-serif;
+      font-family: system-ui, -apple-system, sans-serif;
     }
     .card {
       background: rgba(255, 255, 255, 0.08);
       border: 3px solid #38bdf8;
       border-radius: 28px;
-      padding: 40px 60px;
+      padding: 36px 48px;
       text-align: center;
-      box-shadow: 0 0 50px rgba(56, 189, 248, 0.4);
+      box-shadow: 0 0 50px rgba(56, 189, 248, 0.35);
+      max-width: 90%;
     }
     #time {
-      font-size: 4.5rem;
+      font-size: 4rem;
       font-weight: 900;
-      letter-spacing: 4px;
+      letter-spacing: 3px;
       text-shadow: 0 0 30px rgba(56, 189, 248, 0.8);
+      font-variant-numeric: tabular-nums;
     }
     #date {
       color: #f472b6;
-      font-size: 1.5rem;
-      margin-top: 15px;
+      font-size: 1.3rem;
+      margin-top: 14px;
+      font-weight: 700;
+      text-transform: capitalize;
+    }
+    .badge {
+      display: inline-block;
+      margin-top: 18px;
+      padding: 6px 16px;
+      border-radius: 9999px;
+      background: rgba(56, 189, 248, 0.15);
+      color: #7dd3fc;
+      font-size: 0.85rem;
       font-weight: 700;
     }
   </style>
 </head>
 <body>
   <div class="card">
-    <div id="time">00:00:00</div>
+    <div id="time">--:--:--</div>
     <div id="date">Oggi</div>
+    <div class="badge">● In esecuzione su WinTablet</div>
   </div>
   <script>
     function update() {
@@ -88,19 +105,83 @@ const TEMPLATES: Record<string, { name: string; lang: string; code: string }> = 
   calculator: {
     name: 'Calcolatrice Touch',
     lang: 'html',
+    desc: 'Calcolatrice interattiva con tasti a sfioramento',
     code: `<!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { background: #0f172a; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: sans-serif; }
-    .calc { background: #1e293b; padding: 24px; border-radius: 24px; width: 330px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); border: 3px solid #3b82f6; }
-    #display { width: 100%; height: 65px; background: #020617; color: #38bdf8; font-size: 2.4rem; text-align: right; padding: 12px 18px; box-sizing: border-box; border-radius: 14px; border: 2px solid #334155; margin-bottom: 20px; font-family: monospace; font-weight: bold; }
-    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-    button { height: 60px; border-radius: 14px; border: none; font-size: 1.4rem; font-weight: bold; cursor: pointer; background: #334155; color: #fff; transition: 0.1s; }
-    button:active { transform: scale(0.94); background: #475569; }
-    button.op { background: #2563eb; color: #fff; }
-    button.equal { background: #10b981; grid-column: span 2; }
-    button.clear { background: #ef4444; }
+    * { box-sizing: border-box; }
+    body {
+      background: #090d16;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .calc {
+      background: #1e293b;
+      padding: 24px;
+      border-radius: 28px;
+      width: 320px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+      border: 3px solid #3b82f6;
+    }
+    #display {
+      width: 100%;
+      height: 65px;
+      background: #020617;
+      color: #38bdf8;
+      font-size: 2.2rem;
+      text-align: right;
+      padding: 12px 16px;
+      border-radius: 16px;
+      border: 2px solid #334155;
+      margin-bottom: 20px;
+      font-family: monospace;
+      font-weight: bold;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    button {
+      height: 56px;
+      border-radius: 14px;
+      border: none;
+      font-size: 1.3rem;
+      font-weight: bold;
+      cursor: pointer;
+      background: #334155;
+      color: #ffffff;
+      transition: all 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+    button:active {
+      transform: scale(0.92);
+      background: #475569;
+    }
+    button.op {
+      background: #2563eb;
+      color: #ffffff;
+    }
+    button.op:active {
+      background: #1d4ed8;
+    }
+    button.equal {
+      background: #10b981;
+      grid-column: span 2;
+    }
+    button.clear {
+      background: #ef4444;
+    }
   </style>
 </head>
 <body>
@@ -108,9 +189,9 @@ const TEMPLATES: Record<string, { name: string; lang: string; code: string }> = 
     <input id="display" readonly value="0">
     <div class="grid">
       <button class="clear" onclick="clr()">C</button>
-      <button onclick="add('/')">/</button>
-      <button onclick="add('*')">×</button>
-      <button class="op" onclick="del()">←</button>
+      <button class="op" onclick="add('/')">/</button>
+      <button class="op" onclick="add('*')">×</button>
+      <button class="op" onclick="del()">⌫</button>
       <button onclick="add('7')">7</button>
       <button onclick="add('8')">8</button>
       <button onclick="add('9')">9</button>
@@ -122,17 +203,30 @@ const TEMPLATES: Record<string, { name: string; lang: string; code: string }> = 
       <button onclick="add('1')">1</button>
       <button onclick="add('2')">2</button>
       <button onclick="add('3')">3</button>
-      <button onclick="add('0')">0</button>
       <button onclick="add('.')">.</button>
+      <button onclick="add('0')">0</button>
       <button class="equal" onclick="calc()">=</button>
     </div>
   </div>
   <script>
     const d = document.getElementById('display');
-    function add(v) { if(d.value==='0') d.value=v; else d.value+=v; }
-    function clr() { d.value='0'; }
-    function del() { d.value=d.value.slice(0,-1)||'0'; }
-    function calc() { try{ d.value=eval(d.value); } catch(e){ d.value='Errore'; } }
+    function add(v) {
+      if (d.value === '0' && v !== '.') d.value = v;
+      else d.value += v;
+    }
+    function clr() { d.value = '0'; }
+    function del() {
+      d.value = d.value.length > 1 ? d.value.slice(0, -1) : '0';
+    }
+    function calc() {
+      try {
+        const expr = d.value.replace(/×/g, '*');
+        const res = Function('"use strict"; return (' + expr + ')')();
+        d.value = String(res);
+      } catch(e) {
+        d.value = 'Errore';
+      }
+    }
   </script>
 </body>
 </html>`,
@@ -140,12 +234,22 @@ const TEMPLATES: Record<string, { name: string; lang: string; code: string }> = 
   particles: {
     name: 'Canvas Particelle',
     lang: 'html',
+    desc: 'Animazione 60fps particelle interattive al tocco',
     code: `<!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8">
   <style>
-    body { margin: 0; overflow: hidden; background: #000; }
-    canvas { display: block; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #050811;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
   </style>
 </head>
 <body>
@@ -153,35 +257,43 @@ const TEMPLATES: Record<string, { name: string; lang: string; code: string }> = 
   <script>
     const canvas = document.getElementById('c');
     const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
     const particles = [];
     const colors = ['#f43f5e', '#38bdf8', '#a855f7', '#facc15', '#10b981'];
 
-    for (let i = 0; i < 70; i++) {
+    for (let i = 0; i < 80; i++) {
       particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 4,
-        vy: (Math.random() - 0.5) * 4,
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        vx: (Math.random() - 0.5) * 3,
+        vy: (Math.random() - 0.5) * 3,
         radius: Math.random() * 5 + 3,
         color: colors[Math.floor(Math.random() * colors.length)]
       });
     }
 
     function loop() {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+      ctx.fillStyle = 'rgba(5, 8, 17, 0.2)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
       particles.forEach(p => {
         p.x += p.vx;
         p.y += p.vy;
-        if(p.x < 0 || p.x > canvas.width) p.vx *= -1;
-        if(p.y < 0 || p.y > canvas.height) p.vy *= -1;
+        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+        
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
         ctx.fillStyle = p.color;
         ctx.shadowColor = p.color;
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = 15;
         ctx.fill();
       });
       requestAnimationFrame(loop);
@@ -194,27 +306,37 @@ const TEMPLATES: Record<string, { name: string; lang: string; code: string }> = 
   jsTest: {
     name: 'Algoritmi JS',
     lang: 'javascript',
+    desc: 'Script di benchmark memoria tablet e matematica',
     code: `// Test JavaScript nel browser con console a colori
 console.log("=== BENVENUTO IN DEVSTUDIO LITE ===");
+console.log("Sistema: WinTablet WebOS");
+console.log("Data:", new Date().toLocaleString('it-IT'));
 
+// 1. Calcolo Fattoriale
 function calcolaFattoriale(n) {
   if (n <= 1) return 1;
   return n * calcolaFattoriale(n - 1);
 }
 
+console.log("--- TEST MATEMATICO ---");
 for (let i = 1; i <= 6; i++) {
   console.log("Fattoriale di", i, "=>", calcolaFattoriale(i));
 }
 
-// Simulazione dati
-const dati = {
-  applicazione: "DevStudio Lite",
-  versione: "2.5",
-  stato: "Ottimizzato per Tablet",
-  memoriaUsata: "< 1.5 MB"
+// 2. Calcolo Risparmio Memoria Tablet
+const appPesantiMb = {
+  officeDesk: 520,
+  codeEditorNative: 450,
+  browserStandalone: 380,
+  socialApps: 900
 };
 
-console.log("Riepilogo Sistema:", dati);
+const totaleMbRisparmiati = Object.values(appPesantiMb).reduce((a, b) => a + b, 0);
+
+console.log("--- RISPARMIO SPAZIO TABLET ---");
+console.log("Spazio app native evitate:", totaleMbRisparmiati + " MB (" + (totaleMbRisparmiati / 1024).toFixed(2) + " GB)");
+console.log("Spazio occupato da WinTablet:", "< 2.5 MB nella cache PWA!");
+console.log("Efficienza memoria:", "99.8% di memoria interna salvaguardata.");
 `,
   },
 };
@@ -243,7 +365,7 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
     return initialFile ? initialFile.id : null;
   });
 
-  const [activeTab, setActiveTab] = useState<'editor' | 'preview' | 'split'>('editor');
+  const [activeTab, setActiveTab] = useState<'editor' | 'preview' | 'split'>('split');
   const [fontSize, setFontSize] = useState<number>(18);
   const [previewCode, setPreviewCode] = useState<string>(() => {
     if (initialFile) return initialFile.content;
@@ -255,30 +377,17 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
   const [consoleLogs, setConsoleLogs] = useState<{ type: string; msg: string }[]>([]);
   const [showFileModal, setShowFileModal] = useState<boolean>(false);
 
-  // Editor internal theme toggle (Vibrant Light or Vibrant Dark)
-  const [isEditorDark, setIsEditorDark] = useState<boolean>(false);
+  // Editor internal canvas theme (Dark mode by default avoids eye strain, or Light mode with comfortable paper tone)
+  const [isEditorDark, setIsEditorDark] = useState<boolean>(true);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    if (initialFile) {
-      setCode(initialFile.content);
-      setPreviewCode(initialFile.content);
-      setLanguage(initialFile.language || 'html');
-      setFileName(initialFile.name);
-      setCurrentFileId(initialFile.id);
-      setSavedStatus(true);
-      setRunKey((k) => k + 1);
-    }
-  }, [initialFile]);
-
-  // Execute Code in Sandbox Live Runner safely via srcDoc
-  const handleRun = () => {
-    sound.playClick();
-    setActiveTab('preview');
+  // Core execution engine: works for HTML, JS, and all templates
+  const executeCode = (codeToRun: string, lang: string) => {
+    setActiveTab('split'); // Keep both code and live runner visible
     setConsoleLogs([]);
 
-    if (language === 'javascript' || language === 'typescript') {
+    if (lang === 'javascript' || lang === 'typescript') {
       const logs: { type: string; msg: string }[] = [];
       const customConsole = {
         log: (...args: any[]) => {
@@ -302,9 +411,9 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
       };
 
       try {
-        const runFn = new Function('console', code);
+        const runFn = new Function('console', codeToRun);
         runFn(customConsole);
-        logs.push({ type: 'success', msg: '✓ Esecuzione completata con successo.' });
+        logs.push({ type: 'success', msg: '✓ Esecuzione JS completata con successo.' });
       } catch (err: any) {
         logs.push({ type: 'error', msg: `Errore Runtime: ${err.message}` });
       }
@@ -312,9 +421,25 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
       return;
     }
 
-    // Safely update preview code for the sandboxed iframe using srcDoc (No cross-origin access errors)
-    setPreviewCode(code);
+    // HTML runner: update previewCode and increment runKey to re-render iframe smoothly
+    setPreviewCode(codeToRun);
     setRunKey((k) => k + 1);
+  };
+
+  useEffect(() => {
+    if (initialFile) {
+      setCode(initialFile.content);
+      setLanguage(initialFile.language || 'html');
+      setFileName(initialFile.name);
+      setCurrentFileId(initialFile.id);
+      setSavedStatus(true);
+      executeCode(initialFile.content, initialFile.language || 'html');
+    }
+  }, [initialFile]);
+
+  const handleRun = () => {
+    sound.playClick();
+    executeCode(code, language);
   };
 
   const handleSave = () => {
@@ -353,17 +478,17 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
     URL.revokeObjectURL(url);
   };
 
+  // Instant Template Loader: updates code, sets lang, and auto-executes immediately!
   const loadTemplate = (key: string) => {
     sound.playClick();
     const t = TEMPLATES[key];
     if (t) {
       setCode(t.code);
-      setPreviewCode(t.code);
       setLanguage(t.lang);
       setFileName(t.lang === 'html' ? `${key}.html` : `${key}.js`);
       setCurrentFileId(null);
       setSavedStatus(false);
-      setRunKey((k) => k + 1);
+      executeCode(t.code, t.lang);
     }
   };
 
@@ -372,7 +497,7 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
 
   return (
     <div className="flex flex-col h-full bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 select-text overflow-hidden font-sans">
-      {/* Top Action Ribbon - High Contrast with Big Finger-Friendly Buttons */}
+      {/* Top Action Ribbon */}
       <div className="flex flex-wrap items-center justify-between px-3.5 py-2.5 bg-white dark:bg-slate-900 border-b-2 border-slate-300 dark:border-slate-800 shadow-sm gap-2">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <div className="p-2 rounded-xl bg-emerald-600 text-white shadow-md shrink-0">
@@ -387,6 +512,7 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
               setSavedStatus(false);
             }}
             className="bg-slate-50 dark:bg-slate-950 border-2 border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400 focus:outline-none focus:border-emerald-500 w-44 sm:w-60 truncate shadow-inner"
+            title="Nome del file di codice"
           />
 
           <select
@@ -400,7 +526,6 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
             <option value="html">HTML / CSS / JS</option>
             <option value="javascript">JavaScript (ES6)</option>
             <option value="typescript">TypeScript</option>
-            <option value="python">Python Snippet</option>
             <option value="json">JSON</option>
           </select>
 
@@ -447,7 +572,7 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
             <span className="hidden sm:inline">Apri</span>
           </button>
 
-          {/* Zoom Font Controls (Enlarge font easily on tablet) */}
+          {/* Zoom Font Controls */}
           <div className="flex items-center bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-1 gap-1">
             <button
               onClick={() => setFontSize((f) => Math.max(14, f - 2))}
@@ -513,38 +638,40 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
         </div>
       </div>
 
-      {/* Templates Quick Bar with Vibrant Badges */}
+      {/* Templates Quick Bar - 1-Click Working Examples */}
       <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-300 dark:border-slate-800 text-xs overflow-x-auto">
         <span className="text-amber-600 dark:text-amber-400 font-extrabold shrink-0 flex items-center gap-1.5">
-          <Sparkles className="w-4 h-4" /> Template Pronti:
+          <Sparkles className="w-4 h-4" /> Esempi Funzionanti:
         </span>
         {Object.entries(TEMPLATES).map(([key, t]) => (
           <button
             key={key}
             onClick={() => loadTemplate(key)}
-            className="px-3 py-1 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold rounded-lg whitespace-nowrap transition-colors border border-slate-300 dark:border-slate-700 shadow-sm"
+            className="px-3 py-1 bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-800 dark:text-slate-200 font-extrabold rounded-lg whitespace-nowrap transition-all border border-slate-300 dark:border-slate-700 shadow-sm hover:border-emerald-500 hover:scale-105 active:scale-95 flex items-center gap-1.5"
+            title={`${t.desc} (Tocca per eseguire)`}
           >
-            {t.name}
+            <Play className="w-3 h-3 text-emerald-500 fill-emerald-500" />
+            <span>{t.name}</span>
           </button>
         ))}
       </div>
 
-      {/* Workspace Area: High-Contrast Colorful Code Editor + Preview */}
+      {/* Workspace Area: Code Editor + Live Preview */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        {/* Colorful Code Editor Column */}
+        {/* Code Editor Column */}
         {(activeTab === 'editor' || activeTab === 'split') && (
           <div
             className={`flex flex-col ${
               activeTab === 'split' ? 'w-full md:w-1/2 border-b md:border-b-0 md:border-r-2 border-slate-300 dark:border-slate-700' : 'w-full'
-            } h-full ${isEditorDark ? 'bg-[#0d1117] text-slate-100' : 'bg-white text-slate-900'}`}
+            } h-full ${isEditorDark ? 'bg-[#0d1117] text-slate-100' : 'bg-[#f8fafc] text-slate-900'}`}
           >
             <div className="flex-1 flex overflow-hidden relative">
-              {/* Line Numbers - High Contrast Sized to Font */}
+              {/* Line Numbers */}
               <div
                 className={`w-14 select-none py-3 text-right pr-2 shrink-0 overflow-hidden font-mono font-bold leading-relaxed border-r ${
                   isEditorDark
                     ? 'bg-[#090d13] text-slate-500 border-slate-800'
-                    : 'bg-slate-100 text-slate-500 border-slate-300'
+                    : 'bg-slate-200/70 text-slate-500 border-slate-300'
                 }`}
                 style={{ fontSize: `${fontSize}px` }}
               >
@@ -553,7 +680,7 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
                 ))}
               </div>
 
-              {/* Direct Native Code Editor Textarea (Large, Responsive, High Contrast) */}
+              {/* Native Code Editor Textarea (Large, Responsive, High Contrast) */}
               <textarea
                 ref={textareaRef}
                 value={code}
@@ -565,7 +692,7 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
                 className={`flex-1 p-3.5 font-mono leading-relaxed resize-none focus:outline-none overflow-auto whitespace-pre tab-4 ${
                   isEditorDark
                     ? 'bg-[#0d1117] text-[#58a6ff] caret-white selection:bg-blue-600/60'
-                    : 'bg-white text-[#0969da] caret-black selection:bg-blue-200'
+                    : 'bg-[#f8fafc] text-[#0969da] caret-black selection:bg-blue-200'
                 }`}
                 style={{
                   fontSize: `${fontSize}px`,
@@ -577,11 +704,11 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
           </div>
         )}
 
-        {/* Preview / Console Column */}
+        {/* Live Preview / Console Column */}
         {(activeTab === 'preview' || activeTab === 'split') && (
           <div className={`flex flex-col ${activeTab === 'split' ? 'w-full md:w-1/2' : 'w-full'} h-full bg-slate-100 dark:bg-slate-900`}>
             {language === 'javascript' || language === 'typescript' ? (
-              // JS Console Output Panel with Big Readable Text
+              // JS Console Panel with Color Logs
               <div className="flex flex-col h-full bg-[#030712] text-slate-100 font-mono">
                 <div className="flex items-center justify-between px-4 py-2.5 bg-slate-900 border-b border-slate-700 text-xs">
                   <span className="flex items-center gap-2 text-amber-400 font-extrabold text-sm">
@@ -686,6 +813,7 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
                       setCurrentFileId(f.id);
                       setSavedStatus(true);
                       setShowFileModal(false);
+                      executeCode(f.content, f.language || 'html');
                     }}
                     className="w-full text-left p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center justify-between transition-colors"
                   >
