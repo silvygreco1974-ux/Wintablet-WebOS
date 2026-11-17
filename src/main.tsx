@@ -1,4 +1,5 @@
-import {createRoot} from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
+import { registerSW } from 'virtual:pwa-register';
 import App from './App.tsx';
 import './index.css';
 
@@ -18,4 +19,30 @@ window.addEventListener('appinstalled', () => {
   window.__wtDeferredInstallPrompt = null;
 });
 
+if ('serviceWorker' in navigator) {
+  const hadController = !!navigator.serviceWorker.controller;
+  let isReloading = false;
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController && !isReloading) {
+      isReloading = true;
+      window.location.reload();
+    }
+  });
+
+  registerSW({
+    immediate: true,
+    onRegisteredSW(_swUrl, registration) {
+      if (!registration) return;
+      registration.update().catch(() => {});
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          registration.update().catch(() => {});
+        }
+      });
+    },
+  });
+}
+
 createRoot(document.getElementById('root')!).render(<App />);
+

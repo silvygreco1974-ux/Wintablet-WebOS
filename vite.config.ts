@@ -118,7 +118,7 @@ function scanPublicHtmlApps(publicDir: string) {
     discovered.push(parseHtmlAppMetadata(fullPath, normalizedUrl, fallbackName));
   };
 
-  const scanFolder = (dirPath: string, urlPrefix: string, allowLooseSubdirs: boolean) => {
+  const scanFolder = (dirPath: string, urlPrefix: string) => {
     let entries: fs.Dirent[] = [];
     try {
       entries = fs.readdirSync(dirPath, { withFileTypes: true });
@@ -139,8 +139,8 @@ function scanPublicHtmlApps(publicDir: string) {
       }
 
       if (entry.isDirectory()) {
-        // Never treat static image folders like wallpapers as HTML apps
-        if (urlPrefix === '' && entry.name === 'wallpapers') continue;
+        // Never treat static image folders like wallpapers or assets as HTML apps
+        if (urlPrefix === '' && (entry.name === 'wallpapers' || entry.name === 'assets')) continue;
 
         const indexHtml = fs.existsSync(path.join(fullPath, 'index.html'))
           ? 'index.html'
@@ -151,21 +151,26 @@ function scanPublicHtmlApps(publicDir: string) {
         if (indexHtml) {
           const urlPath = `${urlPrefix}/${entry.name}/${indexHtml}`.replace(/\/+/g, '/');
           registerFile(path.join(fullPath, indexHtml), urlPath, entry.name);
-        } else if (entry.name === 'apps' || allowLooseSubdirs) {
-          scanFolder(fullPath, `${urlPrefix}/${entry.name}`.replace(/\/+/g, '/'), entry.name === 'apps' || allowLooseSubdirs);
+        } else {
+          scanFolder(fullPath, `${urlPrefix}/${entry.name}`.replace(/\/+/g, '/'));
         }
       }
     }
   };
 
-  scanFolder(publicDir, '', false);
+  scanFolder(publicDir, '');
   return discovered;
 }
 
 function publicHtmlAppsPlugin(): Plugin {
-  const publicDir = path.resolve(process.cwd(), 'public');
+  let publicDir = path.resolve(process.cwd(), 'public');
   return {
     name: 'win-tablet-public-html-apps',
+    configResolved(config) {
+      if (config.publicDir) {
+        publicDir = config.publicDir;
+      }
+    },
     resolveId(id) {
       if (id === VIRTUAL_PUBLIC_APPS_ID) {
         return RESOLVED_VIRTUAL_PUBLIC_APPS_ID;
@@ -198,6 +203,7 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
+        injectRegister: null,
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon.svg', 'wallpapers/*.jpg'],
         manifest: {
           id: '/',
@@ -235,8 +241,9 @@ export default defineConfig(() => {
           skipWaiting: true,
           clientsClaim: true,
           cleanupOutdatedCaches: true,
-          navigateFallbackDenylist: [/\.html?$/i, /^\/apps\//, /^\/__public_html_apps/],
+          navigateFallbackDenylist: [/\.html?$/i, /^\/apps\//, /^\/__public_html_apps/, /^\/_headers$/],
           globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff,woff2}'],
+          globIgnores: ['**/_headers'],
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
