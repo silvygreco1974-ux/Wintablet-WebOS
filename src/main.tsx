@@ -20,28 +20,39 @@ window.addEventListener('appinstalled', () => {
 });
 
 if ('serviceWorker' in navigator) {
-  const hadController = !!navigator.serviceWorker.controller;
-  let isReloading = false;
+  if (import.meta.env.DEV) {
+    navigator.serviceWorker
+      .getRegistrations()
+      .then((registrations) => {
+        registrations.forEach((reg) => {
+          reg.unregister().catch(() => {});
+        });
+      })
+      .catch(() => {});
+  } else {
+    const hadController = !!navigator.serviceWorker.controller;
+    let isReloading = false;
 
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (hadController && !isReloading) {
-      isReloading = true;
-      window.location.reload();
-    }
-  });
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (hadController && !isReloading) {
+        isReloading = true;
+        window.location.reload();
+      }
+    });
 
-  registerSW({
-    immediate: true,
-    onRegisteredSW(_swUrl, registration) {
-      if (!registration) return;
-      registration.update().catch(() => {});
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-          registration.update().catch(() => {});
-        }
-      });
-    },
-  });
+    registerSW({
+      immediate: true,
+      onRegisteredSW(_swUrl, registration) {
+        if (!registration) return;
+        registration.update().catch(() => {});
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            registration.update().catch(() => {});
+          }
+        });
+      },
+    });
+  }
 }
 
 createRoot(document.getElementById('root')!).render(<App />);

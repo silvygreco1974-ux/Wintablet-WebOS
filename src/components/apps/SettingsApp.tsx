@@ -13,12 +13,14 @@ import {
   Moon,
   Sparkles,
   Download,
+  RefreshCw,
 } from 'lucide-react';
 import { SystemSettings, AppId } from '../../types/os';
 import { WALLPAPER_LIST } from '../../utils/wallpapers';
 import { sound } from '../../utils/audio';
 import { ACCENT_CONFIGS } from '../../utils/theme';
 import { SYSTEM_APPS_CATALOG } from '../../utils/appsCatalog';
+import { APP_VERSION, checkForAppUpdates, forcePurgeAppCacheAndReload } from '../../utils/pwa';
 import { PWAInstallButton } from '../pwa/PWAInstallButton';
 
 interface SettingsAppProps {
@@ -37,6 +39,31 @@ const ACCENT_COLORS: { id: SystemSettings['accentColor']; name: string; hex: str
 
 export const SettingsApp: React.FC<SettingsAppProps> = ({ settings, onUpdateSettings }) => {
   const currentAccent = ACCENT_CONFIGS[settings.accentColor] || ACCENT_CONFIGS.blue;
+  const [updateStatus, setUpdateStatus] = React.useState<string | null>(null);
+  const [isCheckingUpdate, setIsCheckingUpdate] = React.useState(false);
+
+  const handleCheckUpdates = async () => {
+    sound.playClick();
+    setIsCheckingUpdate(true);
+    setUpdateStatus(null);
+    try {
+      const result = await checkForAppUpdates();
+      if (result === 'updated') {
+        setUpdateStatus('Nuovo aggiornamento trovato! Ricaricamento in corso...');
+        window.setTimeout(() => window.location.reload(), 600);
+      } else {
+        setUpdateStatus(`Versione v${APP_VERSION} attiva. Se non vedi le novità, usa "Svuota cache app e ricarica".`);
+      }
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
+
+  const handleForceCachePurge = async () => {
+    sound.playClick();
+    setUpdateStatus('Pulizia cache PWA in corso...');
+    await forcePurgeAppCacheAndReload();
+  };
 
   const handleWallpaperChange = (url: string) => {
     sound.playClick();
@@ -399,6 +426,50 @@ export const SettingsApp: React.FC<SettingsAppProps> = ({ settings, onUpdateSett
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* App Version & PWA Cache Control */}
+      <div className="bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-800 rounded-2xl p-5 space-y-3 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Info className="w-5 h-5 text-blue-500" />
+            <h3 className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+              Aggiornamenti &amp; Cache PWA
+            </h3>
+          </div>
+          <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
+            WinTablet v{APP_VERSION}
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+          Se dopo un nuovo deploy continui a vedere la versione precedente sul tablet, svuota la cache del Service Worker: i tuoi documenti, appunti e file salvati non verranno toccati.
+        </p>
+
+        {updateStatus && (
+          <div className="px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-xs font-bold text-blue-800 dark:text-blue-200">
+            {updateStatus}
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2.5 pt-1">
+          <button
+            onClick={handleCheckUpdates}
+            disabled={isCheckingUpdate}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white rounded-xl text-xs font-bold shadow-sm transition-colors"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isCheckingUpdate ? 'animate-spin' : ''}`} />
+            <span>{isCheckingUpdate ? 'Controllo...' : 'Controlla aggiornamenti'}</span>
+          </button>
+
+          <button
+            onClick={handleForceCachePurge}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-xs font-bold border border-slate-300 dark:border-slate-700 transition-colors"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-amber-500" />
+            <span>Svuota cache app e ricarica</span>
+          </button>
         </div>
       </div>
     </div>
