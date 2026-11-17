@@ -1,12 +1,10 @@
 import React, { useState, useRef } from 'react';
 import {
-  ArrowLeft,
-  ArrowRight,
   RotateCcw,
   ExternalLink,
   Lock,
   Globe,
-  AlertCircle,
+  FileCode,
 } from 'lucide-react';
 import { sound } from '../../utils/audio';
 
@@ -24,11 +22,13 @@ export const BrowserWindowApp: React.FC<BrowserWindowAppProps> = ({
   const [hasError, setHasError] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
+  const isLocalHtml = url.startsWith('/');
+
   const handleNavigate = (e: React.FormEvent) => {
     e.preventDefault();
     sound.playClick();
     let target = inputUrl.trim();
-    if (!target.startsWith('http://') && !target.startsWith('https://')) {
+    if (!target.startsWith('/') && !target.startsWith('http://') && !target.startsWith('https://')) {
       target = `https://${target}`;
     }
     setUrl(target);
@@ -64,13 +64,17 @@ export const BrowserWindowApp: React.FC<BrowserWindowAppProps> = ({
         {/* Address Bar */}
         <form onSubmit={handleNavigate} className="flex-1 flex items-center min-w-0">
           <div className="flex items-center w-full bg-slate-950 border border-slate-800 hover:border-slate-700 focus-within:border-blue-500 rounded-lg px-2.5 py-1">
-            <Lock className="w-3 h-3 text-emerald-400 mr-2 shrink-0" />
+            {isLocalHtml ? (
+              <FileCode className="w-3 h-3 text-cyan-400 mr-2 shrink-0" />
+            ) : (
+              <Lock className="w-3 h-3 text-emerald-400 mr-2 shrink-0" />
+            )}
             <input
               type="text"
               value={inputUrl}
               onChange={(e) => setInputUrl(e.target.value)}
               className="w-full bg-transparent text-slate-200 text-xs font-mono focus:outline-none"
-              placeholder="Inserisci indirizzo web o URL..."
+              placeholder="Inserisci URL o percorso locale /app.html..."
             />
           </div>
         </form>
@@ -78,25 +82,34 @@ export const BrowserWindowApp: React.FC<BrowserWindowAppProps> = ({
         <button
           onClick={handleOpenExternal}
           className="flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs transition-colors shrink-0"
-          title="Apri in scheda esterna (consigliato se il sito blocca l'incorporamento)"
+          title="Apri in scheda esterna"
         >
           <ExternalLink className="w-3.5 h-3.5 text-blue-400" />
           <span className="hidden sm:inline">Apri Esterno</span>
         </button>
       </div>
 
-      {/* Info notice about iframe limitations on some external domains */}
+      {/* Info notice */}
       <div className="px-3 py-1 bg-slate-900/40 border-b border-slate-800/60 text-[10px] text-slate-400 flex items-center justify-between">
-        <span className="flex items-center gap-1.5 truncate">
-          <Globe className="w-3 h-3 text-slate-500 shrink-0" />
-          <span>Visualizzazione web protetta</span>
-        </span>
-        <button
-          onClick={handleOpenExternal}
-          className="text-blue-400 hover:underline shrink-0 ml-2"
-        >
-          Non vedi il sito? Clicca qui per aprirlo
-        </button>
+        {isLocalHtml ? (
+          <span className="flex items-center gap-1.5 truncate text-emerald-400 font-semibold">
+            <FileCode className="w-3 h-3 shrink-0" />
+            <span>App HTML locale da cartella public (funziona anche offline)</span>
+          </span>
+        ) : (
+          <>
+            <span className="flex items-center gap-1.5 truncate">
+              <Globe className="w-3 h-3 text-slate-500 shrink-0" />
+              <span>Visualizzazione web protetta</span>
+            </span>
+            <button
+              onClick={handleOpenExternal}
+              className="text-blue-400 hover:underline shrink-0 ml-2"
+            >
+              Non vedi il sito? Clicca qui per aprirlo
+            </button>
+          </>
+        )}
       </div>
 
       {/* Main Web View Canvas */}

@@ -70,6 +70,7 @@ export interface CustomWebApp {
   description?: string;
   isPinnedDesktop?: boolean;
   isPinnedTaskbar?: boolean;
+  isLocalHtml?: boolean;
 }
 
 export interface SystemSettings {

@@ -1,3 +1,4 @@
+import { PUBLIC_HTML_APPS } from 'virtual:public-html-apps';
 import { CustomWebApp, StickyNote, SystemSettings, VirtualFile } from '../types/os';
 
 export const WALLPAPERS = [
@@ -302,19 +303,72 @@ export const StorageService = {
     }
   },
 
-  getWebApps(): CustomWebApp[] {
+  getRemovedLocalAppIds(): string[] {
     try {
-      const data = localStorage.getItem('win_tablet_web_apps');
-      if (data) {
-        const list: CustomWebApp[] = JSON.parse(data);
-        return list.filter(
-          (w) => w.id !== 'web-netflix' && w.name.toLowerCase() !== 'netflix'
-        );
+      const data = localStorage.getItem('win_tablet_removed_local_apps');
+      if (data) return JSON.parse(data);
+    } catch {}
+    return [];
+  },
+
+  markLocalAppsRemoved(ids: string[]) {
+    if (ids.length === 0) return;
+    try {
+      const current = new Set(this.getRemovedLocalAppIds());
+      ids.forEach((id) => current.add(id));
+      localStorage.setItem('win_tablet_removed_local_apps', JSON.stringify(Array.from(current)));
+    } catch {}
+  },
+
+  clearRemovedLocalApps() {
+    try {
+      localStorage.removeItem('win_tablet_removed_local_apps');
+    } catch {}
+  },
+
+  syncPublicHtmlApps(
+    discovered: CustomWebApp[] = PUBLIC_HTML_APPS,
+    currentApps?: CustomWebApp[]
+  ): CustomWebApp[] {
+    let base: CustomWebApp[] = currentApps ? [...currentApps] : [];
+    if (!currentApps) {
+      try {
+        const data = localStorage.getItem('win_tablet_web_apps');
+        base = data ? JSON.parse(data) : [...DEFAULT_WEB_APPS];
+      } catch {
+        base = [...DEFAULT_WEB_APPS];
       }
-    } catch (e) {
-      console.warn('Errore lettura web apps', e);
     }
-    return DEFAULT_WEB_APPS;
+
+    const cleanedBase = base.filter(
+      (w) => w.id !== 'web-netflix' && w.name.toLowerCase() !== 'netflix'
+    );
+
+    const removedIds = new Set(this.getRemovedLocalAppIds());
+    const discoveredUrls = new Set(discovered.map((d) => d.url));
+
+    // Drop local HTML apps whose file was removed from public/
+    const kept = cleanedBase
+      .filter((app) => !app.isLocalHtml || discoveredUrls.has(app.url))
+      .map((app) =>
+        app.isLocalHtml || app.url.startsWith('/') ? { ...app, isLocalHtml: app.isLocalHtml ?? true } : app
+      );
+
+    const existingIds = new Set(kept.map((a) => a.id));
+    const existingUrls = new Set(kept.map((a) => a.url.toLowerCase()));
+
+    const newLocalApps = discovered.filter(
+      (d) =>
+        !removedIds.has(d.id) &&
+        !existingIds.has(d.id) &&
+        !existingUrls.has(d.url.toLowerCase())
+    );
+
+    return [...newLocalApps, ...kept];
+  },
+
+  getWebApps(): CustomWebApp[] {
+    return this.syncPublicHtmlApps(PUBLIC_HTML_APPS);
   },
 
   saveWebApps(apps: CustomWebApp[]) {
@@ -390,5 +444,6 @@ export const StorageService = {
     localStorage.removeItem('win_tablet_files');
     localStorage.removeItem('win_tablet_sticky_notes');
     localStorage.removeItem('win_tablet_web_apps');
+    localStorage.removeItem('win_tablet_removed_local_apps');
   },
 };

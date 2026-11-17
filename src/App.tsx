@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AppId, CustomWebApp, StickyNote, SystemSettings, VirtualFile, WindowItem } from './types/os';
 import { StorageService } from './utils/storage';
 import { sound } from './utils/audio';
@@ -142,7 +142,43 @@ export default function App() {
     StorageService.saveStickyNotes(newNotes);
   };
 
+  const rescanPublicApps = useCallback(async (restoreRemoved = false) => {
+    if (restoreRemoved) {
+      StorageService.clearRemovedLocalApps();
+    }
+    try {
+      const res = await fetch('/__public_html_apps', { cache: 'no-store' });
+      const contentType = res.headers.get('content-type') || '';
+      if (res.ok && contentType.includes('application/json')) {
+        const liveApps: CustomWebApp[] = await res.json();
+        setWebApps((prev) => {
+          const synced = StorageService.syncPublicHtmlApps(liveApps, prev);
+          StorageService.saveWebApps(synced);
+          return synced;
+        });
+        return;
+      }
+    } catch {}
+
+    setWebApps((prev) => {
+      const synced = StorageService.syncPublicHtmlApps(undefined, prev);
+      StorageService.saveWebApps(synced);
+      return synced;
+    });
+  }, []);
+
+  useEffect(() => {
+    void rescanPublicApps(false);
+  }, [rescanPublicApps]);
+
   const handleUpdateWebApps = (newApps: CustomWebApp[]) => {
+    const nextIds = new Set(newApps.map((a) => a.id));
+    const removedLocalIds = webApps
+      .filter((a) => a.isLocalHtml && !nextIds.has(a.id))
+      .map((a) => a.id);
+    if (removedLocalIds.length > 0) {
+      StorageService.markLocalAppsRemoved(removedLocalIds);
+    }
     setWebApps(newApps);
     StorageService.saveWebApps(newApps);
   };
@@ -563,6 +599,7 @@ export default function App() {
                 webApps={webApps}
                 onUpdateWebApps={handleUpdateWebApps}
                 onLaunchWebApp={handleLaunchWebApp}
+                onRescanPublicApps={() => rescanPublicApps(true)}
               />
             )}
 
