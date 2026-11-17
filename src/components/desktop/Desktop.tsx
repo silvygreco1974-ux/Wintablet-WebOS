@@ -1,20 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   FileText,
   FileCode,
   StickyNote as StickyIcon,
   Globe,
-  HardDrive,
   Sliders,
-  Calculator,
-  Sparkles,
   Tablet,
   X,
   ExternalLink,
-  Move,
   Sun,
   Moon,
-  Plus,
   Lock,
   Unlock,
   Grid,
@@ -27,14 +22,12 @@ import {
   ChevronUp,
   ChevronDown,
   Edit2,
-  Check,
+  MoreHorizontal,
 } from 'lucide-react';
 import { AppId, CustomWebApp, StickyNote, SystemSettings } from '../../types/os';
 import { sound } from '../../utils/audio';
-import { WALLPAPERS } from '../../utils/storage';
 import { resolveWallpaperUrl } from '../../utils/wallpapers';
-import { ACCENT_CONFIGS } from '../../utils/theme';
-import { PWAInstallButton } from '../pwa/PWAInstallButton';
+import { SYSTEM_APPS_CATALOG } from '../../utils/appsCatalog';
 
 interface DesktopProps {
   settings: SystemSettings;
@@ -124,107 +117,36 @@ export const Desktop: React.FC<DesktopProps> = ({
   const [dragOffset, setDragOffset] = useState<{ id: string; x: number; y: number } | null>(null);
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
 
-  const accentConfig = ACCENT_CONFIGS[settings.accentColor] || ACCENT_CONFIGS.blue;
+  // System apps only appear on Desktop if user explicitly pinned them (they live in Start Menu by default)
+  const pinnedDesktopIds = settings.pinnedDesktopApps || [];
+  const visibleDesktopSystemApps = SYSTEM_APPS_CATALOG.filter((app) =>
+    pinnedDesktopIds.includes(app.id)
+  );
 
-  // Core desktop icons definition
-  const coreApps = [
-    {
-      id: 'text-editor',
-      name: 'Editor Testo',
-      desc: 'Formattazione ricca e salvataggio file',
-      icon: <FileText className="w-7 h-7 text-white" />,
-      color: '#2563eb',
-      glow: 'shadow-blue-500/50',
-    },
-    {
-      id: 'code-editor',
-      name: 'Editor Codice',
-      desc: 'HTML, JS ed anteprima interattiva',
-      icon: <FileCode className="w-7 h-7 text-white" />,
-      color: '#059669',
-      glow: 'shadow-emerald-500/50',
-    },
-    {
-      id: 'sticky-notes',
-      name: 'Sticky Notes',
-      desc: 'Note adesive colorate sul desktop',
-      icon: <StickyIcon className="w-7 h-7 text-white" />,
-      color: '#d97706',
-      glow: 'shadow-amber-500/50',
-    },
-    {
-      id: 'file-explorer',
-      name: 'Questo PC',
-      desc: 'Esplora documenti e file virtuali',
-      icon: <HardDrive className="w-7 h-7 text-white" />,
-      color: '#4f46e5',
-      glow: 'shadow-indigo-500/50',
-    },
-    {
-      id: 'calculator',
-      name: 'Calcolatrice',
-      desc: 'Calcoli matematici e percentuali',
-      icon: <Calculator className="w-7 h-7 text-white" />,
-      color: '#e11d48',
-      glow: 'shadow-rose-500/50',
-    },
-    {
-      id: 'storage-manager',
-      name: 'Memoria Tablet',
-      desc: 'Analisi spazio, cache e backup',
-      icon: <Sparkles className="w-7 h-7 text-white" />,
-      color: '#7c3aed',
-      glow: 'shadow-purple-500/50',
-    },
-    {
-      id: 'settings',
-      name: 'Impostazioni',
-      desc: 'Sfondi, colori risalto e tablet',
-      icon: <Sliders className="w-7 h-7 text-white" />,
-      color: '#475569',
-      glow: 'shadow-slate-500/50',
-    },
-  ];
-
+  // Pre-installed & user web apps pinned to Desktop
   const pinnedWebApps = webApps.filter((w) => w.isPinnedDesktop !== false);
 
-  // Dynamic grid calculator: Arrange in vertical columns down the left side (Windows 11 desktop layout)
-  // Ensures 6 to 8 icons per column vertically, never squeezed into 3 horizontal rows!
+  // Dynamic grid calculator: Arrange in vertical columns down the left side
   const getGridPos = (index: number) => {
     const availableHeight = typeof window !== 'undefined' ? window.innerHeight - 80 : 600;
-    // Calculate how many rows fit comfortably (92px per icon slot)
-    const maxRows = Math.max(6, Math.floor(availableHeight / 92));
-
-    const isWebApp = index >= coreApps.length;
-    let col = 0;
-    let row = 0;
-
-    if (!isWebApp) {
-      // System apps in Column 0
-      col = Math.floor(index / maxRows);
-      row = index % maxRows;
-    } else {
-      // Web apps start in Column 1
-      const webIdx = index - coreApps.length;
-      col = 1 + Math.floor(webIdx / maxRows);
-      row = webIdx % maxRows;
-    }
-
-    return { x: 20 + col * 104, y: 22 + row * 92 };
+    const maxRows = Math.max(6, Math.floor(availableHeight / 96));
+    const col = Math.floor(index / maxRows);
+    const row = index % maxRows;
+    return { x: 20 + col * 104, y: 24 + row * 94 };
   };
 
   // Draggable icon positions state
   const [iconPositions, setIconPositions] = useState<Record<string, { x: number; y: number }>>(() => {
     try {
-      const saved = localStorage.getItem('win_tablet_icon_pos_v2');
+      const saved = localStorage.getItem('win_tablet_icon_pos_v3');
       if (saved) return JSON.parse(saved);
     } catch {}
     const initial: Record<string, { x: number; y: number }> = {};
-    coreApps.forEach((app, idx) => {
-      initial[app.id] = getGridPos(idx);
-    });
     pinnedWebApps.forEach((w, idx) => {
-      initial[`web-${w.id}`] = getGridPos(coreApps.length + idx);
+      initial[`web-${w.id}`] = getGridPos(idx);
+    });
+    visibleDesktopSystemApps.forEach((app, idx) => {
+      initial[app.id] = getGridPos(pinnedWebApps.length + idx);
     });
     return initial;
   });
@@ -232,18 +154,18 @@ export const Desktop: React.FC<DesktopProps> = ({
   const saveIconPositions = (next: Record<string, { x: number; y: number }>) => {
     setIconPositions(next);
     try {
-      localStorage.setItem('win_tablet_icon_pos_v2', JSON.stringify(next));
+      localStorage.setItem('win_tablet_icon_pos_v3', JSON.stringify(next));
     } catch {}
   };
 
   const handleResetIconGrid = () => {
     sound.playClick();
     const next: Record<string, { x: number; y: number }> = {};
-    coreApps.forEach((app, idx) => {
-      next[app.id] = getGridPos(idx);
-    });
     pinnedWebApps.forEach((w, idx) => {
-      next[`web-${w.id}`] = getGridPos(coreApps.length + idx);
+      next[`web-${w.id}`] = getGridPos(idx);
+    });
+    visibleDesktopSystemApps.forEach((app, idx) => {
+      next[app.id] = getGridPos(pinnedWebApps.length + idx);
     });
     saveIconPositions(next);
   };
@@ -369,13 +291,15 @@ export const Desktop: React.FC<DesktopProps> = ({
   };
 
   // Filtered lists for "Tutte le App" drawer
-  const allCoreFiltered = coreApps.filter((a) =>
-    a.name.toLowerCase().includes(appsSearchQuery.toLowerCase()) ||
-    a.desc.toLowerCase().includes(appsSearchQuery.toLowerCase())
+  const allCoreFiltered = SYSTEM_APPS_CATALOG.filter(
+    (a) =>
+      a.name.toLowerCase().includes(appsSearchQuery.toLowerCase()) ||
+      a.desc.toLowerCase().includes(appsSearchQuery.toLowerCase())
   );
-  const allWebFiltered = webApps.filter((w) =>
-    w.name.toLowerCase().includes(appsSearchQuery.toLowerCase()) ||
-    w.category.toLowerCase().includes(appsSearchQuery.toLowerCase())
+  const allWebFiltered = webApps.filter(
+    (w) =>
+      w.name.toLowerCase().includes(appsSearchQuery.toLowerCase()) ||
+      w.category.toLowerCase().includes(appsSearchQuery.toLowerCase())
   );
 
   const resolvedWallpaper = resolveWallpaperUrl(settings.wallpaper);
@@ -396,149 +320,33 @@ export const Desktop: React.FC<DesktopProps> = ({
       {/* Eye-friendly backdrop overlay */}
       <div className="absolute inset-0 bg-slate-950/15 dark:bg-black/35 pointer-events-none" />
 
-      {/* Top Quick Controls Bar */}
-      <div className="absolute top-4 right-4 z-20 flex flex-wrap items-center gap-2">
-        {/* PWA Install Button */}
-        <PWAInstallButton variant="header" />
-
-        {/* All Apps Drawer Button */}
-        <button
-          onClick={() => {
-            sound.playClick();
-            setShowAllAppsModal(true);
-          }}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-300 dark:border-slate-700 shadow-md text-xs font-extrabold text-slate-800 dark:text-slate-100 hover:scale-105 active:scale-95 transition-all"
-          title="Visualizza l'elenco completo di tutte le applicazioni"
-        >
-          <Grid className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-          <span>Tutte le App</span>
-        </button>
-
-        {/* Lock/Unlock Desktop Icons */}
-        <button
-          onClick={() => {
-            sound.playClick();
-            setIsIconsLocked(!isIconsLocked);
-          }}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-md border shadow-md text-xs font-extrabold transition-all ${
-            isIconsLocked
-              ? 'bg-white/95 dark:bg-slate-900/95 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-100'
-              : 'bg-amber-400 text-slate-950 border-amber-500 animate-pulse'
-          }`}
-          title={isIconsLocked ? 'Icone bloccate (tocca per sbloccare spostamento)' : 'Icone sbloccate (trascina liberamente)'}
-        >
-          {isIconsLocked ? <Lock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Unlock className="w-3.5 h-3.5 text-amber-950" />}
-          <span className="hidden sm:inline">{isIconsLocked ? 'Icone Fisse' : 'Sposta Icone'}</span>
-        </button>
-
-        {/* Re-align in vertical columns */}
-        <button
-          onClick={handleResetIconGrid}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 text-white shadow-md text-xs font-bold hover:bg-blue-500 transition-all"
-          title="Allinea in colonne verticali ordinate"
-        >
-          <span>Allinea Icone</span>
-        </button>
-
-        {/* Clear Light / Dark Mode Switcher */}
-        <button
-          onClick={() => {
-            sound.playClick();
-            onToggleTheme();
-          }}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-300 dark:border-slate-700 shadow-md text-xs font-extrabold text-slate-900 dark:text-slate-100 hover:scale-105 active:scale-95 transition-all"
-          title="Alterna Tema Chiaro / Scuro"
-        >
-          {settings.theme === 'light' ? (
-            <>
-              <Sun className="w-4 h-4 text-amber-500 fill-amber-500" />
-              <span>☀️ Chiaro</span>
-            </>
-          ) : (
-            <>
-              <Moon className="w-4 h-4 text-blue-400 fill-blue-400" />
-              <span>🌙 Scuro</span>
-            </>
-          )}
-        </button>
-
-        {/* New Sticky Note */}
-        <button
-          onClick={() => {
-            sound.playClick();
-            onCreateStickyNote();
-          }}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 font-black shadow-md text-xs transition-all hover:scale-105"
-          title="Aggiungi una nuova Sticky Note sul desktop"
-        >
-          <Plus className="w-4 h-4" />
-          <span>+ Nota</span>
-        </button>
-
-        {/* Desktop Menu button */}
+      {/* Minimal Top-Right Corner Menu Trigger */}
+      <div className="absolute top-3 right-3 z-20">
         <button
           onClick={(e) => {
+            e.stopPropagation();
             sound.playClick();
             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-            setContextMenu({ x: Math.max(10, rect.left - 180), y: rect.bottom + 8 });
+            setContextMenu(
+              contextMenu
+                ? null
+                : { x: Math.max(10, rect.right - 256), y: rect.bottom + 8 }
+            );
           }}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/95 dark:bg-slate-900/95 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-100 shadow-md text-xs font-bold hover:scale-105 transition-all"
-          title="Opzioni desktop"
+          className="flex items-center justify-center w-9 h-9 rounded-full bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border border-slate-300/80 dark:border-white/15 text-slate-800 dark:text-slate-100 shadow-md hover:scale-105 active:scale-95 transition-all"
+          title="Azioni Desktop"
+          aria-label="Azioni Desktop"
         >
-          <Sliders className="w-4 h-4 text-blue-500" />
-          <span className="hidden sm:inline">Opzioni</span>
+          <MoreHorizontal className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Desktop App Icons - Vertical columns down the left side (Windows 11 Layout) */}
-      {coreApps.map((app, index) => {
-        const isSelected = selectedIconId === app.id;
-        const pos = isIconsLocked
-          ? getGridPos(index)
-          : iconPositions[app.id] || getGridPos(index);
-
-        return (
-          <div
-            key={app.id}
-            onPointerDown={(e) =>
-              handleIconPointerDown(e, app.id, () => onOpenApp(app.id as AppId))
-            }
-            style={{
-              position: 'absolute',
-              left: `${pos.x}px`,
-              top: `${pos.y}px`,
-              touchAction: isIconsLocked ? 'auto' : 'none',
-            }}
-            className={`w-22 p-1.5 rounded-2xl flex flex-col items-center text-center select-none cursor-pointer active:scale-95 transition-all z-10 ${
-              isSelected
-                ? 'bg-blue-600/35 backdrop-blur-md ring-2 ring-[var(--accent-hex,#2563eb)] shadow-2xl scale-105'
-                : 'hover:scale-105'
-            }`}
-            title={`${app.name} (Tocca per aprire)`}
-          >
-            <div
-              className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-md border-2 border-white/40 transition-transform ${app.glow}`}
-              style={{ backgroundColor: app.color }}
-            >
-              {app.icon}
-            </div>
-
-            <div className="mt-1.5 px-2 py-0.5 rounded-lg bg-white/95 dark:bg-slate-900/90 text-slate-900 dark:text-slate-100 border border-slate-300/80 dark:border-white/15 shadow-sm max-w-full">
-              <span className="text-[10px] font-bold leading-tight truncate block">
-                {app.name}
-              </span>
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Pinned Custom Web Apps (Starting in Column 1 alongside system apps) */}
+      {/* Desktop Pre-Installed Apps (Web Apps) */}
       {pinnedWebApps.map((w, index) => {
         const isSelected = selectedIconId === `web-${w.id}`;
-        const offsetIndex = coreApps.length + index;
         const pos = isIconsLocked
-          ? getGridPos(offsetIndex)
-          : iconPositions[`web-${w.id}`] || getGridPos(offsetIndex);
+          ? getGridPos(index)
+          : iconPositions[`web-${w.id}`] || getGridPos(index);
 
         return (
           <div
@@ -569,6 +377,49 @@ export const Desktop: React.FC<DesktopProps> = ({
             <div className="mt-1.5 px-2 py-0.5 rounded-lg bg-white/95 dark:bg-slate-900/90 text-slate-900 dark:text-slate-100 border border-slate-300/80 dark:border-white/15 shadow-sm max-w-full">
               <span className="text-[10px] font-bold leading-tight truncate block">
                 {w.name}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Optional User-Pinned System Apps on Desktop */}
+      {visibleDesktopSystemApps.map((app, index) => {
+        const isSelected = selectedIconId === app.id;
+        const offsetIndex = pinnedWebApps.length + index;
+        const pos = isIconsLocked
+          ? getGridPos(offsetIndex)
+          : iconPositions[app.id] || getGridPos(offsetIndex);
+
+        return (
+          <div
+            key={app.id}
+            onPointerDown={(e) =>
+              handleIconPointerDown(e, app.id, () => onOpenApp(app.id as AppId))
+            }
+            style={{
+              position: 'absolute',
+              left: `${pos.x}px`,
+              top: `${pos.y}px`,
+              touchAction: isIconsLocked ? 'auto' : 'none',
+            }}
+            className={`w-22 p-1.5 rounded-2xl flex flex-col items-center text-center select-none cursor-pointer active:scale-95 transition-all z-10 ${
+              isSelected
+                ? 'bg-blue-600/35 backdrop-blur-md ring-2 ring-[var(--accent-hex,#2563eb)] shadow-2xl scale-105'
+                : 'hover:scale-105'
+            }`}
+            title={`${app.name} (Tocca per aprire)`}
+          >
+            <div
+              className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-md border-2 border-white/40 transition-transform ${app.glow}`}
+              style={{ backgroundColor: app.color }}
+            >
+              {app.renderIcon('w-6 h-6 text-white')}
+            </div>
+
+            <div className="mt-1.5 px-2 py-0.5 rounded-lg bg-white/95 dark:bg-slate-900/90 text-slate-900 dark:text-slate-100 border border-slate-300/80 dark:border-white/15 shadow-sm max-w-full">
+              <span className="text-[10px] font-bold leading-tight truncate block">
+                {app.shortName}
               </span>
             </div>
           </div>
@@ -796,7 +647,7 @@ export const Desktop: React.FC<DesktopProps> = ({
                         className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-md border border-white/20"
                         style={{ backgroundColor: app.color }}
                       >
-                        {app.icon}
+                        {app.renderIcon('w-6 h-6 text-white')}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
@@ -968,13 +819,33 @@ export const Desktop: React.FC<DesktopProps> = ({
 
           <button
             onClick={() => {
+              setIsIconsLocked(!isIconsLocked);
+              setContextMenu(null);
+            }}
+            className="w-full text-left px-4 py-2 hover:bg-blue-600 hover:text-white flex items-center gap-3 transition-colors"
+          >
+            {isIconsLocked ? (
+              <>
+                <Unlock className="w-4 h-4 text-amber-500" />
+                <span>Sblocca Spostamento Icone</span>
+              </>
+            ) : (
+              <>
+                <Lock className="w-4 h-4 text-emerald-500" />
+                <span>Blocca Posizione Icone</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={() => {
               handleResetIconGrid();
               setContextMenu(null);
             }}
             className="w-full text-left px-4 py-2 hover:bg-blue-600 hover:text-white flex items-center gap-3 transition-colors"
           >
             <Sliders className="w-4 h-4 text-emerald-600" />
-            <span>Riorganizza Icone in Colonne Verticali</span>
+            <span>Allinea Icone in Colonne</span>
           </button>
 
           <button
@@ -985,7 +856,7 @@ export const Desktop: React.FC<DesktopProps> = ({
             className="w-full text-left px-4 py-2 hover:bg-blue-600 hover:text-white flex items-center gap-3 transition-colors"
           >
             <ImageIcon className="w-4 h-4 text-purple-600" />
-            <span>Cambia Sfondo e Colori</span>
+            <span>Sfondi, Colori e Barra</span>
           </button>
         </div>
       )}

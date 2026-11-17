@@ -14,10 +14,11 @@ import {
   Sparkles,
   Download,
 } from 'lucide-react';
-import { SystemSettings } from '../../types/os';
+import { SystemSettings, AppId } from '../../types/os';
 import { WALLPAPER_LIST } from '../../utils/wallpapers';
 import { sound } from '../../utils/audio';
 import { ACCENT_CONFIGS } from '../../utils/theme';
+import { SYSTEM_APPS_CATALOG } from '../../utils/appsCatalog';
 import { PWAInstallButton } from '../pwa/PWAInstallButton';
 
 interface SettingsAppProps {
@@ -66,6 +67,27 @@ export const SettingsApp: React.FC<SettingsAppProps> = ({ settings, onUpdateSett
         ? '/wallpapers/win_bloom_light.jpg'
         : '/wallpapers/win_bloom_dark.jpg';
     onUpdateSettings({ ...settings, theme, wallpaper: nextWallpaper });
+  };
+
+  const pinnedTaskbarApps = settings.pinnedTaskbarApps || ['text-editor', 'code-editor', 'file-explorer'];
+  const pinnedDesktopApps = settings.pinnedDesktopApps || [];
+
+  const togglePinTaskbar = (appId: AppId) => {
+    sound.playClick();
+    const exists = pinnedTaskbarApps.includes(appId);
+    const next = exists
+      ? pinnedTaskbarApps.filter((id) => id !== appId)
+      : [...pinnedTaskbarApps, appId];
+    onUpdateSettings({ ...settings, pinnedTaskbarApps: next });
+  };
+
+  const togglePinDesktop = (appId: AppId) => {
+    sound.playClick();
+    const exists = pinnedDesktopApps.includes(appId);
+    const next = exists
+      ? pinnedDesktopApps.filter((id) => id !== appId)
+      : [...pinnedDesktopApps, appId];
+    onUpdateSettings({ ...settings, pinnedDesktopApps: next });
   };
 
   return (
@@ -315,6 +337,71 @@ export const SettingsApp: React.FC<SettingsAppProps> = ({ settings, onUpdateSett
           </div>
         </div>
       </div>
+
+      {/* Taskbar & Desktop App Visibility Customizer */}
+      <div className="bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-800 rounded-2xl p-5 space-y-4 shadow-sm">
+        <div>
+          <h3 className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+            Personalizza Barra & Desktop
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Tutte le app di sistema si trovano sempre nel menu Start. Scegli quali mostrare anche sulla barra in basso o sul desktop.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {SYSTEM_APPS_CATALOG.map((app) => {
+            const onTaskbar = pinnedTaskbarApps.includes(app.id);
+            const onDesktop = pinnedDesktopApps.includes(app.id);
+            return (
+              <div
+                key={app.id}
+                className="flex items-center justify-between gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm"
+                    style={{ backgroundColor: app.color }}
+                  >
+                    {app.renderIcon('w-4 h-4 text-white')}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                      {app.name}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() => togglePinTaskbar(app.id)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors border ${
+                      onTaskbar
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700'
+                    }`}
+                    title="Mostra sulla barra delle applicazioni in basso"
+                  >
+                    Barra
+                  </button>
+                  <button
+                    onClick={() => togglePinDesktop(app.id)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors border ${
+                      onDesktop
+                        ? 'bg-emerald-600 text-white border-emerald-600'
+                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700'
+                    }`}
+                    title="Mostra icona anche sul desktop"
+                  >
+                    Desktop
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 };
+

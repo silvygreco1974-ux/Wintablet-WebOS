@@ -69,6 +69,52 @@ export default function App() {
     applyAccentToDocument(settings.accentColor);
   }, [settings.accentColor]);
 
+  // Clamp floating windows only on real orientation/window resizes (never steal keyboard/editor focus on tablet)
+  useEffect(() => {
+    const clampWindowsOnResize = () => {
+      if (typeof window === 'undefined') return;
+      const activeTag = document.activeElement?.tagName;
+      const isEditing =
+        activeTag === 'INPUT' ||
+        activeTag === 'TEXTAREA' ||
+        (document.activeElement as HTMLElement | null)?.isContentEditable;
+      if (isEditing) return;
+
+      const vpW = window.innerWidth;
+      const vpH = window.innerHeight;
+
+      setWindows((prev) => {
+        let changed = false;
+        const next = prev.map((w) => {
+          const maxW = Math.max(280, vpW - 16);
+          const maxH = Math.max(220, vpH - 64);
+          const clampedW = Math.min(w.size.width, maxW);
+          const clampedH = Math.min(w.size.height, maxH);
+          const clampedX = Math.max(0, Math.min(w.position.x, Math.max(0, vpW - 140)));
+          const clampedY = Math.max(0, Math.min(w.position.y, Math.max(0, vpH - 110)));
+          if (
+            clampedW === w.size.width &&
+            clampedH === w.size.height &&
+            clampedX === w.position.x &&
+            clampedY === w.position.y
+          ) {
+            return w;
+          }
+          changed = true;
+          return {
+            ...w,
+            position: { x: clampedX, y: clampedY },
+            size: { width: clampedW, height: clampedH },
+          };
+        });
+        return changed ? next : prev;
+      });
+    };
+
+    window.addEventListener('resize', clampWindowsOnResize);
+    return () => window.removeEventListener('resize', clampWindowsOnResize);
+  }, []);
+
   const handleToggleTheme = () => {
     const nextTheme = settings.theme === 'light' ? 'dark' : 'light';
     const nextWallpaper =
@@ -132,6 +178,10 @@ export default function App() {
     const nextZ = maxZIndex + 1;
     setMaxZIndex(nextZ);
 
+    const viewportW = typeof window !== 'undefined' ? (window.visualViewport?.width || window.innerWidth) : 1200;
+    const viewportH = typeof window !== 'undefined' ? (window.visualViewport?.height || window.innerHeight) : 800;
+    const shouldStartMaximized = viewportW < 900 || viewportH < 640;
+
     if (existing) {
       setWindows((prev) =>
         prev.map((w) =>
@@ -142,6 +192,14 @@ export default function App() {
                 isMinimized: false,
                 zIndex: nextZ,
                 title,
+                position: {
+                  x: Math.max(0, Math.min(w.position.x, Math.max(0, viewportW - 140))),
+                  y: Math.max(0, Math.min(w.position.y, Math.max(0, viewportH - 110))),
+                },
+                size: {
+                  width: Math.min(w.size.width, Math.max(280, viewportW - 16)),
+                  height: Math.min(w.size.height, Math.max(220, viewportH - 64)),
+                },
                 customData: customData || w.customData,
               }
             : w
@@ -151,15 +209,12 @@ export default function App() {
       return;
     }
 
-    // Determine initial position
-    const viewportW = typeof window !== 'undefined' ? window.innerWidth : 1200;
-    const viewportH = typeof window !== 'undefined' ? window.innerHeight : 800;
-
-    const w = Math.min(defaultW, viewportW - 40);
-    const h = Math.min(defaultH, viewportH - 80);
-    const offset = (windows.length % 5) * 28;
-    const initialX = Math.max(20, Math.min(viewportW - w - 20, 60 + offset));
-    const initialY = Math.max(20, Math.min(viewportH - h - 70, 30 + offset));
+    // Determine initial clamped position and size
+    const w = Math.min(defaultW, Math.max(280, viewportW - 24));
+    const h = Math.min(defaultH, Math.max(220, viewportH - 68));
+    const offset = (windows.length % 5) * 24;
+    const initialX = Math.max(8, Math.min(Math.max(8, viewportW - w - 8), 40 + offset));
+    const initialY = Math.max(8, Math.min(Math.max(8, viewportH - h - 60), 20 + offset));
 
     const newWin: WindowItem = {
       id: `${appId}-${Date.now()}`,
@@ -169,7 +224,7 @@ export default function App() {
       color,
       isOpen: true,
       isMinimized: false,
-      isMaximized: false, // Default to floating window so it can immediately be moved and repositioned
+      isMaximized: shouldStartMaximized,
       position: { x: initialX, y: initialY },
       size: { width: w, height: h },
       zIndex: nextZ,
@@ -222,11 +277,20 @@ export default function App() {
             prevSize: { ...w.size },
           };
         } else {
+          const vpW = window.visualViewport?.width || window.innerWidth;
+          const vpH = window.visualViewport?.height || window.innerHeight;
+          const nextSize = w.prevSize || { width: 780, height: 540 };
+          const clampedW = Math.min(nextSize.width, Math.max(280, vpW - 20));
+          const clampedH = Math.min(nextSize.height, Math.max(220, vpH - 64));
+          const nextPos = w.prevPosition || { x: 24, y: 20 };
           return {
             ...w,
             isMaximized: false,
-            position: w.prevPosition || { x: 80, y: 40 },
-            size: w.prevSize || { width: 780, height: 540 },
+            position: {
+              x: Math.max(0, Math.min(nextPos.x, Math.max(0, vpW - clampedW))),
+              y: Math.max(0, Math.min(nextPos.y, Math.max(0, vpH - clampedH - 52))),
+            },
+            size: { width: clampedW, height: clampedH },
           };
         }
       })
@@ -234,8 +298,8 @@ export default function App() {
   };
 
   const snapWindow = (id: string, type: 'left' | 'right' | 'maximize' | 'center') => {
-    const screenW = window.innerWidth;
-    const screenH = window.innerHeight - 48; // subtract taskbar
+    const screenW = window.visualViewport?.width || window.innerWidth;
+    const screenH = (window.visualViewport?.height || window.innerHeight) - 52;
 
     setWindows((prev) =>
       prev.map((w) => {
@@ -260,11 +324,13 @@ export default function App() {
           };
         }
         // center
+        const cw = Math.min(780, Math.max(280, screenW - 24));
+        const ch = Math.min(540, Math.max(220, screenH - 16));
         return {
           ...w,
           isMaximized: false,
-          position: { x: Math.floor((screenW - 780) / 2), y: Math.floor((screenH - 540) / 2) },
-          size: { width: 780, height: 540 },
+          position: { x: Math.max(0, Math.floor((screenW - cw) / 2)), y: Math.max(0, Math.floor((screenH - ch) / 2)) },
+          size: { width: cw, height: ch },
         };
       })
     );
@@ -432,7 +498,7 @@ export default function App() {
   };
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-slate-100 dark:bg-slate-950 font-sans antialiased">
+    <div className="relative w-full h-[100dvh] overflow-hidden bg-slate-100 dark:bg-slate-950 font-sans antialiased">
       <OfflineIndicator />
       {/* Desktop Surface */}
       <Desktop
@@ -545,7 +611,13 @@ export default function App() {
         onOpenFile={handleOpenFile}
         webApps={webApps}
         recentFiles={files}
-        taskbarAlign={settings.taskbarAlign}
+        settings={settings}
+        onTogglePinTaskbar={(appId) => {
+          const current = settings.pinnedTaskbarApps || ['text-editor', 'code-editor', 'file-explorer'];
+          const exists = current.includes(appId);
+          const next = exists ? current.filter((id) => id !== appId) : [...current, appId];
+          handleUpdateSettings({ ...settings, pinnedTaskbarApps: next });
+        }}
       />
 
       <ActionCenter

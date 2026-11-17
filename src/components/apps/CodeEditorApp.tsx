@@ -1,20 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Play,
   RotateCcw,
   Save,
-  Download,
   Copy,
   Check,
   FolderOpen,
   FileCode,
-  Layout,
   Terminal,
   ZoomIn,
   ZoomOut,
   Sparkles,
   Sun,
   Moon,
+  Trash2,
 } from 'lucide-react';
 import { VirtualFile } from '../../types/os';
 import { sound } from '../../utils/audio';
@@ -51,13 +50,13 @@ const TEMPLATES: Record<string, { name: string; lang: string; code: string; desc
       background: rgba(255, 255, 255, 0.08);
       border: 3px solid #38bdf8;
       border-radius: 28px;
-      padding: 36px 48px;
+      padding: 28px 40px;
       text-align: center;
       box-shadow: 0 0 50px rgba(56, 189, 248, 0.35);
-      max-width: 90%;
+      max-width: 92%;
     }
     #time {
-      font-size: 4rem;
+      font-size: clamp(2.2rem, 8vw, 4rem);
       font-weight: 900;
       letter-spacing: 3px;
       text-shadow: 0 0 30px rgba(56, 189, 248, 0.8);
@@ -65,19 +64,19 @@ const TEMPLATES: Record<string, { name: string; lang: string; code: string; desc
     }
     #date {
       color: #f472b6;
-      font-size: 1.3rem;
-      margin-top: 14px;
+      font-size: 1.15rem;
+      margin-top: 12px;
       font-weight: 700;
       text-transform: capitalize;
     }
     .badge {
       display: inline-block;
-      margin-top: 18px;
-      padding: 6px 16px;
+      margin-top: 16px;
+      padding: 6px 14px;
       border-radius: 9999px;
       background: rgba(56, 189, 248, 0.15);
       color: #7dd3fc;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: 700;
     }
   </style>
@@ -120,40 +119,42 @@ const TEMPLATES: Record<string, { name: string; lang: string; code: string; desc
       align-items: center;
       min-height: 100vh;
       margin: 0;
+      padding: 12px;
       font-family: system-ui, -apple-system, sans-serif;
     }
     .calc {
       background: #1e293b;
-      padding: 24px;
-      border-radius: 28px;
-      width: 320px;
+      padding: 18px;
+      border-radius: 24px;
+      width: 100%;
+      max-width: 300px;
       box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-      border: 3px solid #3b82f6;
+      border: 2px solid #3b82f6;
     }
     #display {
       width: 100%;
-      height: 65px;
+      height: 56px;
       background: #020617;
       color: #38bdf8;
-      font-size: 2.2rem;
+      font-size: 1.8rem;
       text-align: right;
-      padding: 12px 16px;
-      border-radius: 16px;
+      padding: 10px 14px;
+      border-radius: 14px;
       border: 2px solid #334155;
-      margin-bottom: 20px;
+      margin-bottom: 14px;
       font-family: monospace;
       font-weight: bold;
     }
     .grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
+      gap: 8px;
     }
     button {
-      height: 56px;
-      border-radius: 14px;
+      height: 48px;
+      border-radius: 12px;
       border: none;
-      font-size: 1.3rem;
+      font-size: 1.2rem;
       font-weight: bold;
       cursor: pointer;
       background: #334155;
@@ -171,9 +172,6 @@ const TEMPLATES: Record<string, { name: string; lang: string; code: string; desc
     button.op {
       background: #2563eb;
       color: #ffffff;
-    }
-    button.op:active {
-      background: #1d4ed8;
     }
     button.equal {
       background: #10b981;
@@ -234,7 +232,7 @@ const TEMPLATES: Record<string, { name: string; lang: string; code: string; desc
   particles: {
     name: 'Canvas Particelle',
     lang: 'html',
-    desc: 'Animazione 60fps particelle interattive al tocco',
+    desc: 'Animazione 60fps particelle interattive',
     code: `<!DOCTYPE html>
 <html>
 <head>
@@ -268,7 +266,7 @@ const TEMPLATES: Record<string, { name: string; lang: string; code: string; desc
     const particles = [];
     const colors = ['#f43f5e', '#38bdf8', '#a855f7', '#facc15', '#10b981'];
 
-    for (let i = 0; i < 80; i++) {
+    for (let i = 0; i < 70; i++) {
       particles.push({
         x: Math.random() * window.innerWidth,
         y: Math.random() * window.innerHeight,
@@ -312,7 +310,6 @@ console.log("=== BENVENUTO IN DEVSTUDIO LITE ===");
 console.log("Sistema: WinTablet WebOS");
 console.log("Data:", new Date().toLocaleString('it-IT'));
 
-// 1. Calcolo Fattoriale
 function calcolaFattoriale(n) {
   if (n <= 1) return 1;
   return n * calcolaFattoriale(n - 1);
@@ -323,7 +320,6 @@ for (let i = 1; i <= 6; i++) {
   console.log("Fattoriale di", i, "=>", calcolaFattoriale(i));
 }
 
-// 2. Calcolo Risparmio Memoria Tablet
 const appPesantiMb = {
   officeDesk: 520,
   codeEditorNative: 450,
@@ -340,6 +336,80 @@ console.log("Efficienza memoria:", "99.8% di memoria interna salvaguardata.");
 `,
   },
 };
+
+// Lightweight TypeScript annotation stripper so common TS snippets execute cleanly in-browser
+function transpileBasicTypeScript(tsCode: string): string {
+  return tsCode
+    // Remove interface declarations (single-level balanced braces)
+    .replace(/^\s*(?:export\s+)?interface\s+\w+(?:\s*<[^>]*>)?(?:\s+extends\s+[^{]+)?\s*\{[^}]*\}\s*;?/gm, '')
+    // Remove type aliases
+    .replace(/^\s*(?:export\s+)?type\s+\w+(?:\s*<[^>]*>)?\s*=\s*[^;\n]+;?/gm, '')
+    // Remove import type lines
+    .replace(/^\s*import\s+type\s+.*;?\s*$/gm, '')
+    // Strip export keyword for inline execution
+    .replace(/^\s*export\s+(?=(?:const|let|var|function|class|async)\b)/gm, '')
+    // Strip variable type annotations: const x: Type = ... -> const x = ...
+    .replace(/\b(const|let|var)\s+([a-zA-Z_$][\w$]*)\s*:\s*[^=;]+(?==)/g, '$1 $2 ')
+    // Strip function parameter type annotations: (a: number, b: string) -> (a, b)
+    .replace(/(\(|,)\s*([a-zA-Z_$][\w$]*)\??\s*:\s*[a-zA-Z_$][\w$<>\[\]\s|&]*(?=[,)=])/g, '$1 $2')
+    // Strip function return type annotations before '{' or '=>'
+    .replace(/\)\s*:\s*[a-zA-Z_$][\w$<>\[\]\s|&]*(?=\s*(?:\{|=>))/g, ')')
+    // Strip `as Type` assertions
+    .replace(/\s+as\s+[a-zA-Z_$][\w$<>\[\]|&]*/g, '');
+}
+
+// Wrap HTML code with safe postMessage console & error bridge
+function buildHtmlSrcDoc(rawHtml: string): string {
+  const bridgeScript = `<script>
+(function(){
+  function fmt(a){
+    if(typeof a==='string') return a;
+    try{ return JSON.stringify(a); }catch(e){ return String(a); }
+  }
+  function send(type, args){
+    try{
+      window.parent.postMessage({
+        source: 'wintablet-html-runner',
+        type: type,
+        msg: Array.prototype.slice.call(args).map(fmt).join(' ')
+      }, '*');
+    }catch(e){}
+  }
+  var origLog=console.log, origWarn=console.warn, origErr=console.error, origInfo=console.info;
+  console.log=function(){ send('log', arguments); origLog.apply(console, arguments); };
+  console.info=function(){ send('log', arguments); origInfo.apply(console, arguments); };
+  console.warn=function(){ send('warn', arguments); origWarn.apply(console, arguments); };
+  console.error=function(){ send('error', arguments); origErr.apply(console, arguments); };
+  window.addEventListener('error', function(ev){
+    send('error', ['Errore JS: ' + ev.message + (ev.lineno ? ' (riga ' + ev.lineno + ')' : '')]);
+  });
+  window.addEventListener('unhandledrejection', function(ev){
+    send('error', ['Promise rifiutata: ' + (ev.reason && ev.reason.message ? ev.reason.message : ev.reason)]);
+  });
+})();
+</script>`;
+
+  if (/<head[^>]*>/i.test(rawHtml)) {
+    return rawHtml.replace(/<head([^>]*)>/i, `<head$1>${bridgeScript}`);
+  }
+  if (/<html[^>]*>/i.test(rawHtml)) {
+    return rawHtml.replace(/<html([^>]*)>/i, `<html$1><head>${bridgeScript}</head>`);
+  }
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">${bridgeScript}</head><body>${rawHtml}</body></html>`;
+}
+
+function formatLogArg(arg: unknown): string {
+  if (typeof arg === 'string') return arg;
+  if (arg instanceof Error) return `${arg.name}: ${arg.message}`;
+  if (typeof arg === 'object' && arg !== null) {
+    try {
+      return JSON.stringify(arg, null, 2);
+    } catch {
+      return String(arg);
+    }
+  }
+  return String(arg);
+}
 
 export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
   initialFile,
@@ -366,7 +436,7 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
   });
 
   const [activeTab, setActiveTab] = useState<'editor' | 'preview' | 'split'>('split');
-  const [fontSize, setFontSize] = useState<number>(18);
+  const [fontSize, setFontSize] = useState<number>(16);
   const [previewCode, setPreviewCode] = useState<string>(() => {
     if (initialFile) return initialFile.content;
     return TEMPLATES.clock.code;
@@ -375,45 +445,75 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
   const [savedStatus, setSavedStatus] = useState<boolean>(true);
   const [copyFeedback, setCopyFeedback] = useState<boolean>(false);
   const [consoleLogs, setConsoleLogs] = useState<{ type: string; msg: string }[]>([]);
+  const [htmlLogs, setHtmlLogs] = useState<{ type: string; msg: string }[]>([]);
   const [showFileModal, setShowFileModal] = useState<boolean>(false);
-
-  // Editor internal canvas theme (Dark mode by default avoids eye strain, or Light mode with comfortable paper tone)
   const [isEditorDark, setIsEditorDark] = useState<boolean>(true);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const lineNumbersRef = useRef<HTMLDivElement>(null);
 
-  // Core execution engine: works for HTML, JS, and all templates
-  const executeCode = (codeToRun: string, lang: string) => {
-    setActiveTab('split'); // Keep both code and live runner visible
+  // Listen to logs & runtime errors coming from HTML preview iframe
+  useEffect(() => {
+    const onMessage = (ev: MessageEvent) => {
+      if (ev.data && ev.data.source === 'wintablet-html-runner') {
+        setHtmlLogs((prev) => [...prev.slice(-49), { type: ev.data.type, msg: ev.data.msg }]);
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
+
+  const executeCode = useCallback((codeToRun: string, lang: string) => {
+    setActiveTab((prev) => (prev === 'editor' ? 'split' : prev));
     setConsoleLogs([]);
+    setHtmlLogs([]);
+
+    if (lang === 'json') {
+      try {
+        const parsed = JSON.parse(codeToRun);
+        const pretty = JSON.stringify(parsed, null, 2);
+        setConsoleLogs([
+          { type: 'success', msg: '✓ JSON valido!' },
+          { type: 'log', msg: pretty },
+        ]);
+      } catch (err: any) {
+        setConsoleLogs([{ type: 'error', msg: `Errore sintassi JSON: ${err.message}` }]);
+      }
+      return;
+    }
 
     if (lang === 'javascript' || lang === 'typescript') {
       const logs: { type: string; msg: string }[] = [];
       const customConsole = {
-        log: (...args: any[]) => {
-          logs.push({
-            type: 'log',
-            msg: args.map((a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a))).join(' '),
-          });
+        log: (...args: unknown[]) => {
+          logs.push({ type: 'log', msg: args.map(formatLogArg).join(' ') });
         },
-        error: (...args: any[]) => {
-          logs.push({
-            type: 'error',
-            msg: args.map((a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a))).join(' '),
-          });
+        info: (...args: unknown[]) => {
+          logs.push({ type: 'log', msg: args.map(formatLogArg).join(' ') });
         },
-        warn: (...args: any[]) => {
-          logs.push({
-            type: 'warn',
-            msg: args.map((a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a))).join(' '),
-          });
+        error: (...args: unknown[]) => {
+          logs.push({ type: 'error', msg: args.map(formatLogArg).join(' ') });
+        },
+        warn: (...args: unknown[]) => {
+          logs.push({ type: 'warn', msg: args.map(formatLogArg).join(' ') });
+        },
+        table: (data: unknown) => {
+          logs.push({ type: 'log', msg: formatLogArg(data) });
         },
       };
 
       try {
-        const runFn = new Function('console', codeToRun);
-        runFn(customConsole);
-        logs.push({ type: 'success', msg: '✓ Esecuzione JS completata con successo.' });
+        const jsToRun =
+          lang === 'typescript' ? transpileBasicTypeScript(codeToRun) : codeToRun;
+        const runFn = new Function('console', `"use strict";\n${jsToRun}`);
+        const returnVal = runFn(customConsole);
+        if (returnVal !== undefined) {
+          logs.push({ type: 'log', msg: `↳ Ritorno: ${formatLogArg(returnVal)}` });
+        }
+        logs.push({
+          type: 'success',
+          msg: `✓ Esecuzione ${lang === 'typescript' ? 'TypeScript' : 'JavaScript'} completata.`,
+        });
       } catch (err: any) {
         logs.push({ type: 'error', msg: `Errore Runtime: ${err.message}` });
       }
@@ -421,10 +521,10 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
       return;
     }
 
-    // HTML runner: update previewCode and increment runKey to re-render iframe smoothly
+    // HTML / CSS / JS runner
     setPreviewCode(codeToRun);
     setRunKey((k) => k + 1);
-  };
+  }, []);
 
   useEffect(() => {
     if (initialFile) {
@@ -435,7 +535,7 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
       setSavedStatus(true);
       executeCode(initialFile.content, initialFile.language || 'html');
     }
-  }, [initialFile]);
+  }, [initialFile, executeCode]);
 
   const handleRun = () => {
     sound.playClick();
@@ -467,18 +567,6 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
     setTimeout(() => setCopyFeedback(false), 2000);
   };
 
-  const handleDownload = () => {
-    sound.playClick();
-    const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // Instant Template Loader: updates code, sets lang, and auto-executes immediately!
   const loadTemplate = (key: string) => {
     sound.playClick();
     const t = TEMPLATES[key];
@@ -492,16 +580,41 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
     }
   };
 
+  const handleTextareaScroll = () => {
+    if (textareaRef.current && lineNumbersRef.current) {
+      lineNumbersRef.current.scrollTop = textareaRef.current.scrollTop;
+    }
+  };
+
+  const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const el = e.currentTarget;
+      const start = el.selectionStart;
+      const end = el.selectionEnd;
+      const nextCode = code.substring(0, start) + '  ' + code.substring(end);
+      setCode(nextCode);
+      setSavedStatus(false);
+      requestAnimationFrame(() => {
+        el.selectionStart = el.selectionEnd = start + 2;
+      });
+    } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      handleRun();
+    }
+  };
+
   const lineCount = code.split('\n').length;
   const codeFiles = files.filter((f) => f.type === 'code');
+  const isConsoleLang = language === 'javascript' || language === 'typescript' || language === 'json';
 
   return (
-    <div className="flex flex-col h-full bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 select-text overflow-hidden font-sans">
-      {/* Top Action Ribbon */}
-      <div className="flex flex-wrap items-center justify-between px-3.5 py-2.5 bg-white dark:bg-slate-900 border-b-2 border-slate-300 dark:border-slate-800 shadow-sm gap-2">
+    <div className="flex flex-col h-full min-h-0 bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 select-text overflow-hidden font-sans">
+      {/* Row 1: Primary File & Core Actions Bar */}
+      <div className="shrink-0 flex items-center justify-between gap-2 px-3 py-2 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <div className="p-2 rounded-xl bg-emerald-600 text-white shadow-md shrink-0">
-            <FileCode className="w-5 h-5" />
+          <div className="hidden sm:flex p-1.5 rounded-xl bg-emerald-600 text-white shadow-sm shrink-0">
+            <FileCode className="w-4 h-4" />
           </div>
 
           <input
@@ -511,17 +624,18 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
               setFileName(e.target.value);
               setSavedStatus(false);
             }}
-            className="bg-slate-50 dark:bg-slate-950 border-2 border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400 focus:outline-none focus:border-emerald-500 w-44 sm:w-60 truncate shadow-inner"
+            className="min-w-0 w-28 sm:w-44 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs sm:text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400 focus:outline-none focus:border-emerald-500 truncate"
             title="Nome del file di codice"
           />
 
           <select
             value={language}
             onChange={(e) => {
-              setLanguage(e.target.value);
+              const nextLang = e.target.value;
+              setLanguage(nextLang);
               setSavedStatus(false);
             }}
-            className="bg-slate-50 dark:bg-slate-950 border-2 border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none"
+            className="shrink-0 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none"
           >
             <option value="html">HTML / CSS / JS</option>
             <option value="javascript">JavaScript (ES6)</option>
@@ -529,10 +643,10 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
             <option value="json">JSON</option>
           </select>
 
-          <span className="text-xs font-bold hidden md:inline">
+          <span className="text-xs font-bold hidden lg:inline shrink-0">
             {savedStatus ? (
               <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                <Check className="w-4 h-4" /> Salvato
+                <Check className="w-3.5 h-3.5" /> Salvato
               </span>
             ) : (
               <span className="text-amber-600 dark:text-amber-400">● Modificato</span>
@@ -540,147 +654,174 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
           </span>
         </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Big RUN Button */}
+        {/* Core Actions */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
+            type="button"
             onClick={handleRun}
-            className="flex items-center gap-2 px-5 py-2 bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 rounded-xl font-black text-sm shadow-[0_4px_16px_rgba(16,185,129,0.4)] transition-all hover:scale-105"
-            title="Esegui Codice (Play)"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 rounded-xl font-black text-xs sm:text-sm shadow-sm transition-all shrink-0"
+            title="Esegui Codice (Ctrl+Invio)"
           >
-            <Play className="w-4 h-4 fill-current" />
+            <Play className="w-3.5 h-3.5 fill-current" />
             <span>ESEGUI</span>
           </button>
 
-          {/* Save */}
           <button
+            type="button"
             onClick={handleSave}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-95"
+            className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95 shrink-0"
             title="Salva file"
           >
-            <Save className="w-4 h-4" />
-            <span>Salva</span>
+            <Save className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Salva</span>
           </button>
 
-          {/* Open Existing File Modal */}
           <button
+            type="button"
             onClick={() => setShowFileModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold transition-colors shrink-0"
             title="Apri file salvato"
           >
-            <FolderOpen className="w-4 h-4 text-amber-500" />
+            <FolderOpen className="w-3.5 h-3.5 text-amber-500" />
             <span className="hidden sm:inline">Apri</span>
           </button>
-
-          {/* Zoom Font Controls */}
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-1 gap-1">
-            <button
-              onClick={() => setFontSize((f) => Math.max(14, f - 2))}
-              className="p-1 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded font-bold"
-              title="Riduci Carattere"
-            >
-              <ZoomOut className="w-4 h-4" />
-            </button>
-            <span className="text-xs font-extrabold px-1 font-mono text-slate-900 dark:text-slate-100">
-              {fontSize}px
-            </span>
-            <button
-              onClick={() => setFontSize((f) => Math.min(32, f + 2))}
-              className="p-1 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded font-bold"
-              title="Ingrandisci Carattere"
-            >
-              <ZoomIn className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Light/Dark Editor Canvas Toggle */}
-          <button
-            onClick={() => setIsEditorDark(!isEditorDark)}
-            className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-200 transition-colors"
-            title={isEditorDark ? 'Passa a sfondo editor chiaro' : 'Passa a sfondo editor scuro'}
-          >
-            {isEditorDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-blue-500" />}
-          </button>
-
-          {/* View Tab Switcher */}
-          <div className="flex items-center bg-slate-200 dark:bg-slate-800 p-1 rounded-xl">
-            <button
-              onClick={() => setActiveTab('editor')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
-                activeTab === 'editor'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-700 dark:text-slate-300 hover:text-black dark:hover:text-white'
-              }`}
-            >
-              Codice
-            </button>
-            <button
-              onClick={() => setActiveTab('split')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
-                activeTab === 'split'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-700 dark:text-slate-300 hover:text-black dark:hover:text-white'
-              }`}
-            >
-              Split
-            </button>
-            <button
-              onClick={() => setActiveTab('preview')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
-                activeTab === 'preview'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-700 dark:text-slate-300 hover:text-black dark:hover:text-white'
-              }`}
-            >
-              Anteprima
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* Templates Quick Bar - 1-Click Working Examples */}
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-300 dark:border-slate-800 text-xs overflow-x-auto">
-        <span className="text-amber-600 dark:text-amber-400 font-extrabold shrink-0 flex items-center gap-1.5">
-          <Sparkles className="w-4 h-4" /> Esempi Funzionanti:
-        </span>
-        {Object.entries(TEMPLATES).map(([key, t]) => (
+      {/* Row 2: View Switcher, Horizontally Scrollable Templates & Editor Tools */}
+      <div className="shrink-0 flex items-center gap-2.5 px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-300 dark:border-slate-800 text-xs overflow-x-auto whitespace-nowrap">
+        {/* View Tab Switcher */}
+        <div className="shrink-0 flex items-center bg-slate-200 dark:bg-slate-800 p-0.5 rounded-xl">
           <button
-            key={key}
-            onClick={() => loadTemplate(key)}
-            className="px-3 py-1 bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-800 dark:text-slate-200 font-extrabold rounded-lg whitespace-nowrap transition-all border border-slate-300 dark:border-slate-700 shadow-sm hover:border-emerald-500 hover:scale-105 active:scale-95 flex items-center gap-1.5"
-            title={`${t.desc} (Tocca per eseguire)`}
+            type="button"
+            onClick={() => setActiveTab('editor')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all ${
+              activeTab === 'editor'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-700 dark:text-slate-300 hover:text-black dark:hover:text-white'
+            }`}
           >
-            <Play className="w-3 h-3 text-emerald-500 fill-emerald-500" />
-            <span>{t.name}</span>
+            Codice
           </button>
-        ))}
+          <button
+            type="button"
+            onClick={() => setActiveTab('split')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all ${
+              activeTab === 'split'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-700 dark:text-slate-300 hover:text-black dark:hover:text-white'
+            }`}
+          >
+            Split
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('preview')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all ${
+              activeTab === 'preview'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-700 dark:text-slate-300 hover:text-black dark:hover:text-white'
+            }`}
+          >
+            Anteprima
+          </button>
+        </div>
+
+        <div className="h-5 w-px bg-slate-300 dark:bg-slate-700 shrink-0" />
+
+        {/* Templates */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-amber-600 dark:text-amber-400 font-extrabold shrink-0 flex items-center gap-1">
+            <Sparkles className="w-3.5 h-3.5" /> Esempi:
+          </span>
+          {Object.entries(TEMPLATES).map(([key, t]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => loadTemplate(key)}
+              className="shrink-0 px-2.5 py-1 bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-800 dark:text-slate-200 font-extrabold rounded-lg whitespace-nowrap transition-all border border-slate-300 dark:border-slate-700 shadow-sm hover:border-emerald-500 active:scale-95 flex items-center gap-1.5"
+              title={`${t.desc} (Tocca per eseguire)`}
+            >
+              <Play className="w-3 h-3 text-emerald-500 fill-emerald-500" />
+              <span>{t.name}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="h-5 w-px bg-slate-300 dark:bg-slate-700 shrink-0 ml-auto" />
+
+        {/* Secondary Editor Controls */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-0.5 gap-0.5">
+            <button
+              type="button"
+              onClick={() => setFontSize((f) => Math.max(12, f - 2))}
+              className="p-1 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg font-bold"
+              title="Riduci Carattere"
+            >
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-[11px] font-extrabold px-1 font-mono text-slate-900 dark:text-slate-100">
+              {fontSize}px
+            </span>
+            <button
+              type="button"
+              onClick={() => setFontSize((f) => Math.min(28, f + 2))}
+              className="p-1 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg font-bold"
+              title="Ingrandisci Carattere"
+            >
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsEditorDark(!isEditorDark)}
+            className="p-1.5 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-200 transition-colors"
+            title={isEditorDark ? 'Sfondo editor chiaro' : 'Sfondo editor scuro'}
+          >
+            {isEditorDark ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-blue-500" />}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="flex items-center gap-1 px-2.5 py-1.5 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold transition-colors"
+            title="Copia codice"
+          >
+            {copyFeedback ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
+        </div>
       </div>
 
-      {/* Workspace Area: Code Editor + Live Preview */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+      {/* Workspace Area: Code Editor + Live Preview (Fixes mobile/tablet split height!) */}
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
         {/* Code Editor Column */}
         {(activeTab === 'editor' || activeTab === 'split') && (
           <div
-            className={`flex flex-col ${
-              activeTab === 'split' ? 'w-full md:w-1/2 border-b md:border-b-0 md:border-r-2 border-slate-300 dark:border-slate-700' : 'w-full'
-            } h-full ${isEditorDark ? 'bg-[#0d1117] text-slate-100' : 'bg-[#f8fafc] text-slate-900'}`}
+            className={`flex flex-col min-h-0 ${
+              activeTab === 'split'
+                ? 'w-full md:w-1/2 h-1/2 md:h-full border-b-2 md:border-b-0 md:border-r-2 border-slate-300 dark:border-slate-700'
+                : 'w-full h-full'
+            } ${isEditorDark ? 'bg-[#0d1117] text-slate-100' : 'bg-[#f8fafc] text-slate-900'}`}
           >
-            <div className="flex-1 flex overflow-hidden relative">
+            <div className="flex-1 min-h-0 flex overflow-hidden relative">
               {/* Line Numbers */}
               <div
-                className={`w-14 select-none py-3 text-right pr-2 shrink-0 overflow-hidden font-mono font-bold leading-relaxed border-r ${
+                ref={lineNumbersRef}
+                className={`w-12 select-none py-3 text-right pr-2 shrink-0 overflow-hidden font-mono font-bold leading-relaxed border-r ${
                   isEditorDark
                     ? 'bg-[#090d13] text-slate-500 border-slate-800'
                     : 'bg-slate-200/70 text-slate-500 border-slate-300'
                 }`}
                 style={{ fontSize: `${fontSize}px` }}
               >
-                {Array.from({ length: Math.min(lineCount, 600) }).map((_, i) => (
+                {Array.from({ length: Math.min(lineCount, 800) }).map((_, i) => (
                   <div key={i}>{i + 1}</div>
                 ))}
               </div>
 
-              {/* Native Code Editor Textarea (Large, Responsive, High Contrast) */}
+              {/* Native Code Editor Textarea */}
               <textarea
                 ref={textareaRef}
                 value={code}
@@ -688,8 +829,13 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
                   setCode(e.target.value);
                   setSavedStatus(false);
                 }}
+                onScroll={handleTextareaScroll}
+                onKeyDown={handleTextareaKeyDown}
                 spellCheck={false}
-                className={`flex-1 p-3.5 font-mono leading-relaxed resize-none focus:outline-none overflow-auto whitespace-pre tab-4 ${
+                autoCapitalize="off"
+                autoCorrect="off"
+                autoComplete="off"
+                className={`flex-1 p-3 font-mono leading-relaxed resize-none focus:outline-none overflow-auto whitespace-pre ${
                   isEditorDark
                     ? 'bg-[#0d1117] text-[#58a6ff] caret-white selection:bg-blue-600/60'
                     : 'bg-[#f8fafc] text-[#0969da] caret-black selection:bg-blue-200'
@@ -698,6 +844,7 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
                   fontSize: `${fontSize}px`,
                   fontFamily: "'JetBrains Mono', monospace",
                   tabSize: 2,
+                  touchAction: 'manipulation',
                 }}
               />
             </div>
@@ -706,69 +853,118 @@ export const CodeEditorApp: React.FC<CodeEditorAppProps> = ({
 
         {/* Live Preview / Console Column */}
         {(activeTab === 'preview' || activeTab === 'split') && (
-          <div className={`flex flex-col ${activeTab === 'split' ? 'w-full md:w-1/2' : 'w-full'} h-full bg-slate-100 dark:bg-slate-900`}>
-            {language === 'javascript' || language === 'typescript' ? (
-              // JS Console Panel with Color Logs
-              <div className="flex flex-col h-full bg-[#030712] text-slate-100 font-mono">
-                <div className="flex items-center justify-between px-4 py-2.5 bg-slate-900 border-b border-slate-700 text-xs">
-                  <span className="flex items-center gap-2 text-amber-400 font-extrabold text-sm">
-                    <Terminal className="w-4 h-4" /> Console Output JavaScript
+          <div
+            className={`flex flex-col min-h-0 ${
+              activeTab === 'split' ? 'w-full md:w-1/2 h-1/2 md:h-full' : 'w-full h-full'
+            } bg-slate-100 dark:bg-slate-900`}
+          >
+            {isConsoleLang ? (
+              // JS / TS / JSON Console Panel
+              <div className="flex flex-col h-full min-h-0 bg-[#030712] text-slate-100 font-mono">
+                <div className="shrink-0 flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-700 text-xs">
+                  <span className="flex items-center gap-2 text-amber-400 font-extrabold text-xs sm:text-sm">
+                    <Terminal className="w-4 h-4" />
+                    {language === 'json'
+                      ? 'Validatore & Output JSON'
+                      : language === 'typescript'
+                      ? 'Console Output TypeScript'
+                      : 'Console Output JavaScript'}
                   </span>
-                  <button
-                    onClick={() => setConsoleLogs([])}
-                    className="text-xs px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold"
-                  >
-                    Pulisci console
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleRun}
+                      className="text-xs px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold flex items-center gap-1"
+                    >
+                      <Play className="w-3 h-3 fill-current" /> Esegui
+                    </button>
+                    <button
+                      onClick={() => setConsoleLogs([])}
+                      className="text-xs px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold"
+                    >
+                      Pulisci
+                    </button>
+                  </div>
                 </div>
-                <div className="flex-1 p-4 overflow-y-auto space-y-2 text-base leading-relaxed">
+                <div className="flex-1 min-h-0 p-3 sm:p-4 overflow-y-auto space-y-2 text-sm leading-relaxed">
                   {consoleLogs.length === 0 ? (
-                    <div className="text-slate-500 italic">
-                      Nessun output registrato. Clicca <strong>▶ ESEGUI</strong> in alto per avviare il codice JS.
+                    <div className="text-slate-400 italic">
+                      Premi <strong className="text-emerald-400">▶ ESEGUI</strong> per eseguire il codice e vedere il risultato qui.
                     </div>
                   ) : (
                     consoleLogs.map((log, index) => (
-                      <div
+                      <pre
                         key={index}
-                        className={`p-2 rounded-lg font-mono text-sm ${
+                        className={`p-2.5 rounded-lg font-mono text-xs sm:text-sm whitespace-pre-wrap break-words ${
                           log.type === 'error'
-                            ? 'bg-rose-950/60 text-rose-300 border border-rose-800'
+                            ? 'bg-rose-950/70 text-rose-300 border border-rose-800'
                             : log.type === 'warn'
-                            ? 'bg-amber-950/60 text-amber-300 border border-amber-800'
+                            ? 'bg-amber-950/70 text-amber-300 border border-amber-800'
                             : log.type === 'success'
-                            ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-800 font-bold'
-                            : 'text-cyan-300'
+                            ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-800 font-bold'
+                            : 'text-cyan-300 bg-slate-900/60 border border-slate-800'
                         }`}
                       >
                         {log.msg}
-                      </div>
+                      </pre>
                     ))
                   )}
                 </div>
               </div>
             ) : (
-              // HTML / CSS / JS Sandbox Runner
-              <div className="flex flex-col h-full bg-white">
-                <div className="flex items-center justify-between px-3.5 py-2 bg-slate-200 dark:bg-slate-800 border-b border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200">
+              // HTML / CSS / JS Sandbox Runner with Live Error & Console Feed
+              <div className="flex flex-col h-full min-h-0 bg-white dark:bg-slate-950">
+                <div className="shrink-0 flex items-center justify-between px-3.5 py-1.5 bg-slate-200 dark:bg-slate-800 border-b border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200">
                   <span className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                     Anteprima Web Interattiva
                   </span>
                   <button
                     onClick={handleRun}
-                    className="p-1 hover:bg-slate-300 dark:hover:bg-slate-700 rounded transition-colors"
+                    className="flex items-center gap-1 px-2 py-0.5 hover:bg-slate-300 dark:hover:bg-slate-700 rounded transition-colors"
                     title="Ricarica Anteprima"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Ricarica</span>
                   </button>
                 </div>
+
                 <iframe
                   key={runKey}
-                  srcDoc={previewCode}
+                  srcDoc={buildHtmlSrcDoc(previewCode)}
                   title="Live Preview"
                   sandbox="allow-scripts allow-modals"
-                  className="w-full flex-1 border-none bg-white"
+                  className="w-full flex-1 min-h-0 border-none bg-white"
                 />
+
+                {htmlLogs.length > 0 && (
+                  <div className="shrink-0 max-h-28 overflow-y-auto bg-slate-950 border-t border-slate-700 p-2 font-mono text-xs space-y-1">
+                    <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold pb-1 border-b border-slate-800">
+                      <span className="flex items-center gap-1">
+                        <Terminal className="w-3 h-3 text-amber-400" /> Console HTML ({htmlLogs.length})
+                      </span>
+                      <button
+                        onClick={() => setHtmlLogs([])}
+                        className="hover:text-white flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" /> Pulisci
+                      </button>
+                    </div>
+                    {htmlLogs.map((l, idx) => (
+                      <div
+                        key={idx}
+                        className={
+                          l.type === 'error'
+                            ? 'text-rose-400'
+                            : l.type === 'warn'
+                            ? 'text-amber-300'
+                            : 'text-cyan-300'
+                        }
+                      >
+                        {l.msg}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

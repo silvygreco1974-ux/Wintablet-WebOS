@@ -46,7 +46,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
           className={`p-2 rounded-xl flex items-center justify-center transition-all bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md hover:scale-105 active:scale-95 ${className}`}
           title="Installa WinTablet come PWA sul tablet"
         >
-          <Download className="w-4 h-4 animate-bounce" />
+          <Download className="w-4 h-4" />
         </button>
       );
     }

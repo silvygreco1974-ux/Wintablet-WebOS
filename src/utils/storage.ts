@@ -37,26 +37,28 @@ const DEFAULT_SETTINGS: SystemSettings = {
   systemVolume: 0.7,
   brightness: 100,
   fontScale: 'large',
+  pinnedTaskbarApps: ['text-editor', 'code-editor', 'file-explorer'],
+  pinnedDesktopApps: [],
 };
 
 const DEFAULT_STICKY_NOTES: StickyNote[] = [
   {
     id: 'note-welcome',
     title: 'Benvenuto sul tuo Web OS!',
-    content: 'Questo ambiente è concepito apposta per il tuo tablet:\n- Non occupa spazio su disco\n- Funziona offline nella cache\n- Salva testi, codice e note al volo\n- Puoi aggiungere tutte le tue web app preferite dal menu Start o Web Hub!',
+    content: 'Questo ambiente è concepito apposta per il tuo tablet:\n- Non occupa spazio su disco\n- Funziona offline nella cache\n- Salva testi, codice e note al volo\n- Usa il menu Start per tutte le app di sistema!',
     color: 'yellow',
-    position: { x: 32, y: 40 },
-    size: { width: 260, height: 230 },
+    position: { x: 180, y: 36 },
+    size: { width: 260, height: 220 },
     isPinnedOnDesktop: true,
     updatedAt: Date.now() - 3600000,
   },
   {
     id: 'note-ideas',
     title: 'Idee & Progetti',
-    content: '1. Scrivere bozza articolo\n2. Testare script canvas HTML5\n3. Salvare scorciatoia dizionario online\n4. Fare backup file con 1 click',
+    content: '1. Scrivere bozza articolo\n2. Testare script canvas HTML5\n3. Personalizzare la barra in basso da Start o Impostazioni',
     color: 'blue',
-    position: { x: 310, y: 70 },
-    size: { width: 240, height: 210 },
+    position: { x: 460, y: 68 },
+    size: { width: 240, height: 200 },
     isPinnedOnDesktop: true,
     updatedAt: Date.now() - 1800000,
   },
@@ -175,18 +177,6 @@ console.log("Risparmio effettivo:", "99.8% di memoria risparmiata!");
 ];
 
 const DEFAULT_WEB_APPS: CustomWebApp[] = [
-  {
-    id: 'web-netflix',
-    name: 'Netflix',
-    url: 'https://www.netflix.com',
-    iconName: 'Tv',
-    iconColor: '#e50914',
-    category: 'Intrattenimento',
-    displayMode: 'window',
-    description: 'Film, serie TV e documentari in streaming',
-    isPinnedDesktop: true,
-    isPinnedTaskbar: true,
-  },
   {
     id: 'web-wikipedia',
     name: 'Wikipedia Italia',
@@ -317,11 +307,9 @@ export const StorageService = {
       const data = localStorage.getItem('win_tablet_web_apps');
       if (data) {
         const list: CustomWebApp[] = JSON.parse(data);
-        if (!list.some((w) => w.id === 'web-netflix' || w.name.toLowerCase() === 'netflix')) {
-          const netflix = DEFAULT_WEB_APPS.find((w) => w.id === 'web-netflix')!;
-          return [netflix, ...list];
-        }
-        return list;
+        return list.filter(
+          (w) => w.id !== 'web-netflix' && w.name.toLowerCase() !== 'netflix'
+        );
       }
     } catch (e) {
       console.warn('Errore lettura web apps', e);

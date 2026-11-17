@@ -29,6 +29,8 @@ interface TaskbarProps {
   onMinimizeAll: () => void;
 }
 
+import { SYSTEM_APPS_CATALOG } from '../../utils/appsCatalog';
+
 export const Taskbar: React.FC<TaskbarProps> = ({
   windows,
   activeWindowId,
@@ -57,17 +59,9 @@ export const Taskbar: React.FC<TaskbarProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  // System pinned default apps
-  const defaultPinnedApps: { id: AppId; name: string; iconLabel: string; color: string }[] = [
-    { id: 'text-editor', name: 'Editor Testo', iconLabel: 'T', color: '#2563eb' },
-    { id: 'code-editor', name: 'Editor Codice', iconLabel: '</>', color: '#10b981' },
-    { id: 'sticky-notes', name: 'Sticky Notes', iconLabel: '📝', color: '#f59e0b' },
-    { id: 'web-launcher', name: 'Web Hub', iconLabel: '🌐', color: '#06b6d4' },
-    { id: 'file-explorer', name: 'Questo PC', iconLabel: '📁', color: '#3b82f6' },
-    { id: 'storage-manager', name: 'Memoria Tablet', iconLabel: '💾', color: '#6366f1' },
-    { id: 'calculator', name: 'Calcolatrice', iconLabel: '=', color: '#ec4899' },
-    { id: 'settings', name: 'Impostazioni', iconLabel: '⚙️', color: '#64748b' },
-  ];
+  // Only apps chosen by the user are permanently pinned on the Taskbar
+  const pinnedIds = settings.pinnedTaskbarApps || ['text-editor', 'code-editor', 'file-explorer'];
+  const pinnedApps = SYSTEM_APPS_CATALOG.filter((app) => pinnedIds.includes(app.id));
 
   return (
     <div
@@ -78,7 +72,6 @@ export const Taskbar: React.FC<TaskbarProps> = ({
       {/* Left: Align Left Start or Spacer */}
       {settings.taskbarAlign === 'left' ? (
         <div className="flex items-center gap-1">
-          {/* Windows Logo Start Button */}
           <button
             onClick={() => {
               sound.playClick();
@@ -99,7 +92,6 @@ export const Taskbar: React.FC<TaskbarProps> = ({
             </div>
           </button>
 
-          {/* Search Button */}
           <button
             onClick={() => {
               sound.playClick();
@@ -115,13 +107,12 @@ export const Taskbar: React.FC<TaskbarProps> = ({
         <div className="w-20 hidden md:block" />
       )}
 
-      {/* Center Apps Area (when aligned center) or Continued Left */}
+      {/* Center Apps Area */}
       <div
-        className={`flex items-center gap-1.5 ${
+        className={`flex items-center gap-1.5 overflow-x-auto ${
           settings.taskbarAlign === 'center' ? 'mx-auto' : ''
         }`}
       >
-        {/* If Centered, the Start Button is here */}
         {settings.taskbarAlign === 'center' && (
           <>
             <button
@@ -129,12 +120,12 @@ export const Taskbar: React.FC<TaskbarProps> = ({
                 sound.playClick();
                 onToggleStart();
               }}
-              className={`p-2 rounded-xl flex items-center justify-center transition-all ${
+              className={`p-2 rounded-xl flex items-center justify-center transition-all shrink-0 ${
                 isStartOpen
                   ? 'bg-blue-600 text-white shadow-md scale-105'
                   : 'hover:bg-slate-200 dark:hover:bg-white/10 text-blue-600 dark:text-blue-400'
               }`}
-              title="Start"
+              title="Menu Start (App di sistema)"
             >
               <div className="grid grid-cols-2 gap-0.5 w-4 h-4">
                 <div className="bg-current rounded-sm" />
@@ -149,7 +140,7 @@ export const Taskbar: React.FC<TaskbarProps> = ({
                 sound.playClick();
                 onToggleStart();
               }}
-              className="p-2 rounded-xl hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 transition-colors"
+              className="p-2 rounded-xl hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 transition-colors shrink-0"
               title="Cerca"
             >
               <Search className="w-4 h-4" />
@@ -157,8 +148,8 @@ export const Taskbar: React.FC<TaskbarProps> = ({
           </>
         )}
 
-        {/* Pinned & Running App Icons */}
-        {defaultPinnedApps.map((app) => {
+        {/* User-Chosen Pinned Apps */}
+        {pinnedApps.map((app) => {
           const appWindows = windows.filter((w) => w.appId === app.id && w.isOpen);
           const isRunning = appWindows.length > 0;
           const isActive = appWindows.some((w) => w.id === activeWindowId && !w.isMinimized);
@@ -170,7 +161,7 @@ export const Taskbar: React.FC<TaskbarProps> = ({
                 sound.playClick();
                 onAppClick(app.id, appWindows[0]?.id);
               }}
-              className={`relative p-2 rounded-xl transition-all group flex items-center justify-center ${
+              className={`relative p-2 rounded-xl transition-all group flex items-center justify-center shrink-0 ${
                 isActive
                   ? 'bg-blue-100 dark:bg-white/15 text-blue-900 dark:text-white shadow-sm'
                   : isRunning
@@ -183,10 +174,9 @@ export const Taskbar: React.FC<TaskbarProps> = ({
                 className="w-6 h-6 rounded-md flex items-center justify-center font-bold text-xs text-white shadow-sm border border-white/20"
                 style={{ backgroundColor: app.color }}
               >
-                {app.iconLabel}
+                {app.renderIcon('w-3.5 h-3.5 text-white')}
               </div>
 
-              {/* Running Indicator Bar */}
               {isRunning && (
                 <div
                   className="absolute bottom-0.5 rounded-full transition-all"
@@ -201,15 +191,12 @@ export const Taskbar: React.FC<TaskbarProps> = ({
           );
         })}
 
-        {/* Dynamic browser/custom web app windows in taskbar */}
+        {/* Running unpinned windows (system or web apps) */}
         {windows
-          .filter(
-            (w) =>
-              w.isOpen &&
-              !defaultPinnedApps.some((d) => d.id === w.appId)
-          )
+          .filter((w) => w.isOpen && !pinnedApps.some((p) => p.id === w.appId))
           .map((w) => {
             const isActive = w.id === activeWindowId && !w.isMinimized;
+            const catalogApp = SYSTEM_APPS_CATALOG.find((a) => a.id === w.appId);
             return (
               <button
                 key={w.id}
@@ -217,21 +204,26 @@ export const Taskbar: React.FC<TaskbarProps> = ({
                   sound.playClick();
                   onAppClick(w.appId, w.id);
                 }}
-                className={`relative p-2 rounded-lg transition-all flex items-center justify-center ${
-                  isActive ? 'bg-white/15 text-white' : 'bg-white/5 hover:bg-white/10 text-slate-200'
+                className={`relative p-2 rounded-xl transition-all flex items-center justify-center shrink-0 ${
+                  isActive
+                    ? 'bg-blue-100 dark:bg-white/15 text-blue-900 dark:text-white shadow-sm'
+                    : 'bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200'
                 } ${settings.tabletMode ? 'w-11 h-11' : 'w-10 h-10'}`}
                 title={w.title}
               >
                 <div
-                  className="w-6 h-6 rounded-md flex items-center justify-center font-bold text-xs text-white"
+                  className="w-6 h-6 rounded-md flex items-center justify-center font-bold text-xs text-white shadow-sm border border-white/20"
                   style={{ backgroundColor: w.color }}
                 >
-                  {w.title.charAt(0)}
+                  {catalogApp ? catalogApp.renderIcon('w-3.5 h-3.5 text-white') : w.title.charAt(0)}
                 </div>
                 <div
-                  className={`absolute bottom-0.5 rounded-full ${
-                    isActive ? 'w-4 h-1 bg-blue-400' : 'w-1.5 h-1 bg-slate-400'
-                  }`}
+                  className="absolute bottom-0.5 rounded-full transition-all"
+                  style={{
+                    width: isActive ? '16px' : '6px',
+                    height: '3px',
+                    backgroundColor: isActive ? 'var(--accent-hex, #2563eb)' : '#94a3b8',
+                  }}
                 />
               </button>
             );

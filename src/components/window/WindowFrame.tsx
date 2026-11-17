@@ -56,8 +56,8 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
     // If maximized, restore on touch drag down
     if (win.isMaximized) {
       onMaximize();
-      initialX = Math.max(10, e.clientX - win.size.width / 2);
-      initialY = Math.max(10, e.clientY - 20);
+      initialX = Math.max(0, Math.min(window.innerWidth - 160, e.clientX - win.size.width / 2));
+      initialY = Math.max(0, Math.min(window.innerHeight - 120, e.clientY - 20));
       onUpdatePosition({ x: initialX, y: initialY });
     }
 
@@ -120,22 +120,29 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
 
   if (!win.isOpen || win.isMinimized) return null;
 
+  const vpW = typeof window !== 'undefined' ? window.innerWidth : 1200;
+  const vpH = typeof window !== 'undefined' ? window.innerHeight : 800;
+  const clampedLeft = Math.max(0, Math.min(win.position.x, Math.max(0, vpW - 140)));
+  const clampedTop = Math.max(0, Math.min(win.position.y, Math.max(0, vpH - 110)));
+
   const style: React.CSSProperties = win.isMaximized
     ? {
         position: 'absolute',
         top: 0,
         left: 0,
         width: '100%',
-        height: 'calc(100% - 50px)',
+        height: 'calc(100% - 52px)',
         zIndex: win.zIndex,
         borderRadius: 0,
       }
     : {
         position: 'absolute',
-        top: `${win.position.y}px`,
-        left: `${win.position.x}px`,
+        top: `${clampedTop}px`,
+        left: `${clampedLeft}px`,
         width: `${win.size.width}px`,
         height: `${win.size.height}px`,
+        maxWidth: '100%',
+        maxHeight: 'calc(100% - 52px)',
         zIndex: win.zIndex,
         borderRadius: '12px',
       };
@@ -146,19 +153,21 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
         ...style,
         borderColor: isActive ? 'var(--accent-hex, #2563eb)' : undefined,
       }}
-      onPointerDown={onFocus}
+      onPointerDown={() => {
+        if (!isActive) onFocus();
+      }}
       className={`flex flex-col bg-white dark:bg-slate-900 border transition-[box-shadow,border-color] duration-150 overflow-hidden shadow-2xl ${
         isActive
           ? 'ring-2 ring-[var(--accent-hex,#2563eb)]/30 shadow-[0_16px_50px_rgba(0,0,0,0.28)]'
           : 'border-slate-300 dark:border-slate-700 shadow-[0_8px_24px_rgba(0,0,0,0.15)]'
       }`}
     >
-      {/* Title Bar - Clean Authentic Windows 11 Styling (Light & Dark with Genuine Contrast) */}
+      {/* Title Bar - Locked shrink-0 so internal app content or keyboards never push it off-screen */}
       <div
         onPointerDown={handleTitlePointerDown}
         onDoubleClick={onMaximize}
-        className={`flex items-center justify-between px-3 select-none touch-none cursor-grab active:cursor-grabbing border-b transition-colors ${
-          tabletMode ? 'h-13' : 'h-11'
+        className={`shrink-0 flex items-center justify-between px-3 select-none touch-none cursor-grab active:cursor-grabbing border-b transition-colors z-20 ${
+          tabletMode ? 'h-12' : 'h-11'
         } ${
           isActive
             ? 'bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white border-slate-300 dark:border-slate-800'
@@ -167,7 +176,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
         style={{ touchAction: 'none' }}
       >
         {/* Left: Window Icon and Clear Title */}
-        <div className="flex items-center gap-2.5 min-w-0 pr-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
           <div
             className="w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs text-white shadow-sm shrink-0"
             style={{ backgroundColor: win.color }}
@@ -179,10 +188,10 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
           </span>
         </div>
 
-        {/* Center: Explicit Visual Drag Indicator */}
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-200/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 text-xs font-semibold select-none pointer-events-none">
+        {/* Center: Explicit Visual Drag Indicator (only on wide screens) */}
+        <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-200/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 text-xs font-semibold select-none pointer-events-none mr-2">
           <Move className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-          <span className="hidden sm:inline">Trascina barra</span>
+          <span>Trascina barra</span>
         </div>
 
         {/* Right: Quick Move Pad & Window Controls */}
@@ -334,8 +343,9 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
               sound.playClose();
               onClose();
             }}
-            className="w-9 h-8 flex items-center justify-center hover:bg-rose-600 active:bg-rose-700 text-slate-700 dark:text-slate-300 hover:text-white rounded-lg transition-colors font-bold"
+            className="w-10 h-8 flex items-center justify-center bg-rose-500/10 hover:bg-rose-600 active:bg-rose-700 text-rose-600 dark:text-rose-400 hover:text-white border border-rose-500/25 rounded-lg transition-colors font-bold shrink-0"
             title="Chiudi"
+            aria-label="Chiudi finestra"
           >
             <X className="w-4 h-4" />
           </button>
@@ -343,7 +353,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
       </div>
 
       {/* Window Body Container */}
-      <div className="flex-1 relative overflow-hidden bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">
+      <div className="flex-1 min-h-0 relative overflow-hidden bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">
         {children}
       </div>
     </div>

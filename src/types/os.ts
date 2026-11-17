@@ -82,4 +82,6 @@ export interface SystemSettings {
   systemVolume: number;
   brightness: number;
   fontScale?: 'normal' | 'large' | 'xlarge';
+  pinnedTaskbarApps?: AppId[];
+  pinnedDesktopApps?: AppId[];
 }
