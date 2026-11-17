@@ -899,7 +899,38 @@ export const TextEditorApp: React.FC<TextEditorAppProps> = ({
   const handlePrint = () => {
     sound.playClick();
     setOpenMenu(null);
-    window.print();
+    if (!editorRef.current) {
+      window.print();
+      return;
+    }
+
+    const existingSheet = document.getElementById('wt-print-sheet');
+    if (existingSheet) existingSheet.remove();
+
+    const printSheet = document.createElement('div');
+    printSheet.id = 'wt-print-sheet';
+    printSheet.className = 'rich-editor-content';
+    printSheet.innerHTML = editorRef.current.innerHTML.replace(/\u200B/g, '');
+    document.body.appendChild(printSheet);
+    document.body.classList.add('wt-printing');
+
+    const cleanupPrint = () => {
+      document.body.classList.remove('wt-printing');
+      printSheet.remove();
+      window.removeEventListener('afterprint', cleanupPrint);
+    };
+
+    window.addEventListener('afterprint', cleanupPrint);
+
+    window.setTimeout(() => {
+      window.print();
+      // Fallback cleanup for browsers where afterprint is delayed or skipped
+      window.setTimeout(() => {
+        if (document.body.classList.contains('wt-printing')) {
+          cleanupPrint();
+        }
+      }, 1500);
+    }, 80);
   };
 
   const paperClass =

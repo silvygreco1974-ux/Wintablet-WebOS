@@ -172,3 +172,40 @@
 .rich-editor-content i, .rich-editor-content em {
   font-style: italic;
 }
+
+/* Dedicated clean document printing (exports ONLY document content to PDF, never menus or OS shell) */
+#wt-print-sheet {
+  display: none;
+}
+
+@media print {
+  html,
+  body {
+    height: auto !important;
+    width: 100% !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.wt-printing #root {
+    display: none !important;
+  }
+
+  body.wt-printing #wt-print-sheet {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 16mm 18mm !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
