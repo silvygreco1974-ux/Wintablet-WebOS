@@ -270,26 +270,38 @@ export const TextEditorApp: React.FC<TextEditorAppProps> = ({
     }
   }, [initialFile, computeStatsNow]);
 
-  // Restore saved range without stealing tablet keyboard focus unnecessarily
+  // Restore saved range without letting editor.focus() overwrite a highlighted word selection
   const ensureEditorSelection = (): Selection | null => {
     const editor = editorRef.current;
     if (!editor) return null;
 
-    if (document.activeElement !== editor) {
-      editor.focus({ preventScroll: true });
-    }
     const sel = window.getSelection();
     if (!sel) return null;
 
-    const hasLiveRange =
-      sel.rangeCount > 0 && editor.contains(sel.getRangeAt(0).commonAncestorContainer);
+    const hadFocus = document.activeElement === editor;
+    const preFocusRange = sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
+    const preFocusLive =
+      !!preFocusRange && editor.contains(preFocusRange.commonAncestorContainer);
+    const saved = savedRangeRef.current;
 
-    if (!hasLiveRange && savedRangeRef.current) {
+    if (!hadFocus) {
+      editor.focus({ preventScroll: true });
+    }
+
+    const liveRange = sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
+    const hasLiveRange = !!liveRange && editor.contains(liveRange.commonAncestorContainer);
+
+    if (
+      saved &&
+      editor.contains(saved.commonAncestorContainer) &&
+      (!hasLiveRange ||
+        !preFocusLive ||
+        !hadFocus ||
+        (!saved.collapsed && (!liveRange || liveRange.collapsed)))
+    ) {
       try {
-        if (editor.contains(savedRangeRef.current.commonAncestorContainer)) {
-          sel.removeAllRanges();
-          sel.addRange(savedRangeRef.current);
-        }
+        sel.removeAllRanges();
+        sel.addRange(saved);
       } catch {}
     }
 
@@ -577,7 +589,7 @@ export const TextEditorApp: React.FC<TextEditorAppProps> = ({
     if (!editor || !sel || sel.rangeCount === 0) return;
 
     styleLockUntilRef.current = Date.now() + 260;
-    const range = sel.getRangeAt(0);
+    const range = sel.getRangeAt(0).cloneRange();
 
     if (range.collapsed) {
       const anchorEl =
@@ -598,10 +610,6 @@ export const TextEditorApp: React.FC<TextEditorAppProps> = ({
 
       const span = document.createElement('span');
       span.dataset.typingSpan = 'true';
-      // Preserve active inspector styles when creating a fresh typing span
-      span.style.fontFamily = inspectorRef.current.font;
-      span.style.fontSize = `${inspectorRef.current.size}px`;
-      span.style.color = inspectorRef.current.color;
       span.style[prop] = value;
 
       const zwsp = document.createTextNode('\u200B');
@@ -617,17 +625,30 @@ export const TextEditorApp: React.FC<TextEditorAppProps> = ({
       return;
     }
 
-    // Collect intersecting Text nodes statically before splitting
+    // Snapshot range boundaries BEFORE any splitText call (splitText mutates live Range objects in-place)
+    const rStartContainer = range.startContainer;
+    const rStartOffset = range.startOffset;
+    const rEndContainer = range.endContainer;
+    const rEndOffset = range.endOffset;
+
+    type TextSlice = { txt: Text; start: number; end: number };
+    const slices: TextSlice[] = [];
+
     const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
-    const selectedTextNodes: Text[] = [];
     let currentNode: Node | null = walker.nextNode();
     while (currentNode) {
       const txt = currentNode as Text;
-      if (txt.length > 0 && range.intersectsNode(txt)) {
-        const skipEndZero = txt === range.endContainer && range.endOffset === 0;
-        const skipStartEnd = txt === range.startContainer && range.startOffset >= txt.length;
-        if (!skipEndZero && !skipStartEnd) {
-          selectedTextNodes.push(txt);
+      if (txt.length > 0) {
+        const endAfterStart = range.comparePoint(txt, txt.length) >= 0;
+        const startBeforeEnd = range.comparePoint(txt, 0) <= 0;
+        const skipEndZero = txt === rEndContainer && rEndOffset === 0;
+        const skipStartEnd = txt === rStartContainer && rStartOffset >= txt.length;
+        if (endAfterStart && startBeforeEnd && !skipEndZero && !skipStartEnd) {
+          const start = txt === rStartContainer ? Math.max(0, Math.min(rStartOffset, txt.length)) : 0;
+          const end = txt === rEndContainer ? Math.max(0, Math.min(rEndOffset, txt.length)) : txt.length;
+          if (end > start) {
+            slices.push({ txt, start, end });
+          }
         }
       }
       currentNode = walker.nextNode();
@@ -635,21 +656,17 @@ export const TextEditorApp: React.FC<TextEditorAppProps> = ({
 
     const styledTextNodes: Text[] = [];
 
-    selectedTextNodes.forEach((txt) => {
-      const isStart = txt === range.startContainer;
-      const isEnd = txt === range.endContainer;
+    slices.forEach(({ txt, start, end }) => {
       let target = txt;
-      let endOffset = isEnd ? range.endOffset : txt.length;
+      let localEnd = end;
 
-      if (isStart && range.startOffset > 0 && range.startOffset < txt.length) {
-        target = txt.splitText(range.startOffset);
-        if (isEnd) {
-          endOffset = range.endOffset - range.startOffset;
-        }
+      if (start > 0 && start < target.length) {
+        target = target.splitText(start);
+        localEnd = end - start;
       }
 
-      if ((isEnd || (isStart && isEnd)) && endOffset > 0 && endOffset < target.length) {
-        target.splitText(endOffset);
+      if (localEnd > 0 && localEnd < target.length) {
+        target.splitText(localEnd);
       }
 
       if (target.length === 0) return;
@@ -853,6 +870,7 @@ export const TextEditorApp: React.FC<TextEditorAppProps> = ({
       setDocTitle('Nuovo_Documento.doc');
       setCurrentFileId(null);
       initializedRef.current = '__new__';
+      savedRangeRef.current = null;
       editorRef.current.focus();
       computeStatsNow(false);
     }
@@ -865,6 +883,7 @@ export const TextEditorApp: React.FC<TextEditorAppProps> = ({
       setDocTitle(file.name);
       setCurrentFileId(file.id);
       initializedRef.current = file.id;
+      savedRangeRef.current = null;
       setShowFileModal(false);
       editorRef.current.focus();
       computeStatsNow(false);
@@ -944,19 +963,17 @@ export const TextEditorApp: React.FC<TextEditorAppProps> = ({
   const currentFontLabel =
     FONT_OPTIONS.find((f) => f.value === selectedFontFamily)?.label || 'Plus Jakarta';
 
-  // Capture editor range before touch/click while avoiding focus loss on mouse and scroll-blocking on touch
+  // Preserve editor selection & focus across both mouse and tablet touch toolbar taps
   const captureSelectionOnPointer = (e: React.PointerEvent) => {
     const editor = editorRef.current;
     const sel = window.getSelection();
-    if (editor && sel && sel.rangeCount > 0) {
+    if (editor && document.activeElement === editor && sel && sel.rangeCount > 0) {
       const r = sel.getRangeAt(0);
       if (editor.contains(r.commonAncestorContainer)) {
         savedRangeRef.current = r.cloneRange();
       }
     }
-    if (e.pointerType === 'mouse') {
-      e.preventDefault();
-    }
+    e.preventDefault();
   };
 
   const keepFocus = (e: React.MouseEvent) => {
@@ -1549,6 +1566,10 @@ export const TextEditorApp: React.FC<TextEditorAppProps> = ({
               }
             }}
             onKeyDown={handleEditorKeyDown}
+            onPointerUp={syncSelectionInspector}
+            onTouchEnd={syncSelectionInspector}
+            onMouseUp={syncSelectionInspector}
+            onKeyUp={syncSelectionInspector}
             spellCheck={false}
             tabIndex={0}
             role="textbox"
